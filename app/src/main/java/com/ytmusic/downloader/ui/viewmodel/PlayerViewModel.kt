@@ -89,7 +89,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun expandNowPlaying() {
-        if (_currentTrack.value != null || filteredTracks.value.isNotEmpty()) {
+        if (currentTrack.value != null || filteredTracks.value.isNotEmpty()) {
             _isNowPlayingExpanded.value = true
         }
     }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -115,13 +116,6 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
             } finally {
                 _downloadingTrackIds.value = _downloadingTrackIds.value - track.id
             }
-        }
-    }
-
-    fun togglePlayPreview(track: Track) {
-        val path = track.localFilePath
-        if (!path.isNullOrBlank()) {
-            previewPlayer.playOrPause(track.id, path)
         }
     }
 
