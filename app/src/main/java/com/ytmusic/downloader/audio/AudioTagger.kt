@@ -1,6 +1,5 @@
 package com.ytmusic.downloader.audio
 
-import android.content.Context
 import com.mpatric.mp3agic.ID3v24Tag
 import com.mpatric.mp3agic.Mp3File
 import com.ytmusic.downloader.data.model.AudioFormat
@@ -12,37 +11,44 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 
-class AudioTagger(
-    private val context: Context,
-    private val okHttpClient: OkHttpClient
-) {
+class AudioTagger {
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
 
     /**
-     * Downloads audio stream to a temporary file with progress callback.
+     * Downloads direct audio stream from Googlevideo / Cobalt CDN to local file.
      */
     suspend fun downloadStreamToFile(
         streamUrl: String,
         targetFile: File,
-        onProgress: (percent: Int) -> Unit
+        onProgress: (Int) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(streamUrl)
-            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36")
             .addHeader("Accept-Encoding", "identity")
             .addHeader("Range", "bytes=0-")
-            .addHeader("Referer", "https://music.youtube.com/")
             .build()
 
         try {
             val response = okHttpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext false
+            }
+
             val body = response.body ?: return@withContext false
             val contentLength = body.contentLength()
 
             val inputStream: InputStream = body.byteStream()
             val outputStream = FileOutputStream(targetFile)
 
-            val buffer = ByteArray(8 * 1024)
+            val buffer = ByteArray(16 * 1024)
             var bytesRead: Int
             var totalBytesRead = 0L
 
@@ -58,7 +64,8 @@ class AudioTagger(
             outputStream.flush()
             outputStream.close()
             inputStream.close()
-            true
+
+            targetFile.exists() && targetFile.length() > 1024
         } catch (e: Exception) {
             e.printStackTrace()
             targetFile.delete()
@@ -76,7 +83,11 @@ class AudioTagger(
                 .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .build()
             val response = okHttpClient.newCall(request).execute()
-            response.body?.bytes()
+            if (response.isSuccessful) {
+                response.body?.bytes()
+            } else {
+                null
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null

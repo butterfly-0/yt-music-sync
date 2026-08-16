@@ -20,6 +20,8 @@ class YouTubeClient(private val getCookies: () -> String) {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
+    fun getHttpClient(): OkHttpClient = okHttpClient
+
     /**
      * Executes YouTube Music Innertube API request.
      */
@@ -62,7 +64,7 @@ class YouTubeClient(private val getCookies: () -> String) {
     }
 
     /**
-     * Executes Innertube request with customized Client (e.g. iOS or Android VR).
+     * Executes Innertube request with customized Client (e.g. Android VR or iOS).
      */
     suspend fun postInnertubeWithClient(
         endpoint: String,
@@ -71,12 +73,12 @@ class YouTubeClient(private val getCookies: () -> String) {
         clientVersion: String
     ): JsonObject? = withContext(Dispatchers.IO) {
         val url = "https://www.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"
-        val cookies = getCookies()
 
-        val userAgent = when (clientName) {
-            "IOS" -> "com.google.ios.youtube/$clientVersion (iPhone14,3; U; CPU iOS 17_5_1 like Mac OS X)"
-            "ANDROID_VR" -> "Mozilla/5.0 (Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0"
-            else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        val (userAgent, clientNumber) = when (clientName) {
+            "ANDROID_VR" -> Pair("Mozilla/5.0 (Linux; Android 10; Quest 2) AppleWebKit/537.36", "28")
+            "ANDROID" -> Pair("com.google.android.youtube/19.29.37 (Linux; U; Android 14; uk_UA)", "3")
+            "IOS" -> Pair("com.google.ios.youtube/$clientVersion (iPhone14,3; U; CPU iOS 17_5_1 like Mac OS X)", "5")
+            else -> Pair("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "1")
         }
 
         val requestBuilder = Request.Builder()
@@ -84,12 +86,8 @@ class YouTubeClient(private val getCookies: () -> String) {
             .post(requestBody.toString().toRequestBody(jsonMediaType))
             .addHeader("Content-Type", "application/json")
             .addHeader("User-Agent", userAgent)
-            .addHeader("X-YouTube-Client-Name", if (clientName == "IOS") "5" else "28")
+            .addHeader("X-YouTube-Client-Name", clientNumber)
             .addHeader("X-YouTube-Client-Version", clientVersion)
-
-        if (cookies.isNotBlank()) {
-            requestBuilder.addHeader("Cookie", cookies)
-        }
 
         try {
             val response = okHttpClient.newCall(requestBuilder.build()).execute()
@@ -121,7 +119,6 @@ class YouTubeClient(private val getCookies: () -> String) {
             .addHeader("X-Origin", "https://www.youtube.com")
             .addHeader("Origin", "https://www.youtube.com")
             .addHeader("Referer", "https://www.youtube.com/")
-            .addHeader("X-Goog-AuthUser", "0")
 
         if (cookies.isNotBlank()) {
             requestBuilder.addHeader("Cookie", cookies)
@@ -141,35 +138,4 @@ class YouTubeClient(private val getCookies: () -> String) {
             null
         }
     }
-
-    /**
-     * Executes Android Innertube API request.
-     */
-    suspend fun postAndroidInnertube(endpoint: String, requestBody: JsonObject): JsonObject? = withContext(Dispatchers.IO) {
-        val url = "https://www.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"
-        val cookies = getCookies()
-
-        val requestBuilder = Request.Builder()
-            .url(url)
-            .post(requestBody.toString().toRequestBody(jsonMediaType))
-            .addHeader("Content-Type", "application/json")
-            .addHeader("User-Agent", "com.google.android.youtube/19.16.39 (Linux; U; Android 14) gzip")
-            .addHeader("X-YouTube-Client-Name", "3") // ANDROID
-            .addHeader("X-YouTube-Client-Version", "19.16.39")
-
-        if (cookies.isNotBlank()) {
-            requestBuilder.addHeader("Cookie", cookies)
-        }
-
-        try {
-            val response = okHttpClient.newCall(requestBuilder.build()).execute()
-            val bodyString = response.body?.string() ?: return@withContext null
-            JsonParser.parseString(bodyString).asJsonObject
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    fun getHttpClient(): OkHttpClient = okHttpClient
 }

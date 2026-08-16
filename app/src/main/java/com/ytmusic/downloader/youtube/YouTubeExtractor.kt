@@ -121,27 +121,10 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     }
 
     /**
-     * Extracts direct audio stream URL with multi-client fallbacks (iOS, Android VR, Web, Cobalt, Piped, Invidious).
+     * Extracts direct audio stream URL with multi-client fallbacks (Android VR, Android, Cobalt, Piped).
      */
     suspend fun getAudioStreamUrl(videoId: String, preferredFormat: AudioFormat = AudioFormat.M4A): AudioStreamInfo? = withContext(Dispatchers.IO) {
-        // 1. Try iOS Client (direct unthrottled audio streams without cipher)
-        try {
-            val iosRequestBody = JsonObject().apply {
-                add("context", getIosContext())
-                addProperty("videoId", videoId)
-                addProperty("cpn", generateCpn())
-                addProperty("contentCheckOk", true)
-                addProperty("racyCheckOk", true)
-            }
-
-            val iosResponse = client.postInnertubeWithClient("player", iosRequestBody, "IOS", "19.29.1")
-            val iosStream = extractStreamFromPlayerResponse(iosResponse, preferredFormat)
-            if (iosStream != null) return@withContext iosStream
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        // 2. Try Android VR Context
+        // 1. Try Android VR Context (Verified direct googlevideo unthrottled streams)
         try {
             val vrRequestBody = JsonObject().apply {
                 add("context", getAndroidVrContext())
@@ -157,7 +140,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             e.printStackTrace()
         }
 
-        // 3. Try Standard Android Context
+        // 2. Try Standard Android Context
         try {
             val androidRequestBody = JsonObject().apply {
                 add("context", getAndroidContext())
@@ -166,7 +149,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
                 addProperty("contentCheckOk", true)
                 addProperty("racyCheckOk", true)
             }
-            val androidResponse = client.postAndroidInnertube("player", androidRequestBody)
+            val androidResponse = client.postInnertubeWithClient("player", androidRequestBody, "ANDROID", "19.29.37")
             val androidStream = extractStreamFromPlayerResponse(androidResponse, preferredFormat)
             if (androidStream != null) return@withContext androidStream
         } catch (e: Exception) {
