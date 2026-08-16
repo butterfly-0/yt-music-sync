@@ -92,7 +92,7 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // ID3 Tagging for MP3 / Audio
-    implementation("com.mpatric:mp3agic:0.9.2")
+    implementation("com.mpatric:mp3agic:0.9.1")
 
     // WebKit for WebView login
     implementation("androidx.webkit:webkit:1.11.0")
