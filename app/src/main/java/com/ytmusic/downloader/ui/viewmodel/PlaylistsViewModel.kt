@@ -26,6 +26,20 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAddingPlaylist = MutableStateFlow(false)
     val isAddingPlaylist: StateFlow<Boolean> = _isAddingPlaylist.asStateFlow()
 
+    init {
+        syncPlaylists()
+    }
+
+    fun syncPlaylists() {
+        viewModelScope.launch {
+            try {
+                youtubeRepository.syncUserPlaylists()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun addPlaylist(urlOrId: String, title: String? = null) {
         viewModelScope.launch {
             _isAddingPlaylist.value = true

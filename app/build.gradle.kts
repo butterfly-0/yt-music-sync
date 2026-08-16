@@ -12,8 +12,8 @@ android {
         applicationId = "com.ytmusic.downloader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -114,6 +114,9 @@ dependencies {
 
     // WebKit for WebView login
     implementation("androidx.webkit:webkit:1.11.0")
+
+    // Storage Access Framework DocumentFile
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

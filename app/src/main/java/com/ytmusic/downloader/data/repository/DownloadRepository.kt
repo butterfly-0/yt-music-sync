@@ -18,7 +18,8 @@ class DownloadRepository(
     private val trackDao: TrackDao,
     private val extractor: YouTubeExtractor,
     private val audioTagger: AudioTagger,
-    private val mediaStoreHelper: MediaStoreHelper
+    private val mediaStoreHelper: MediaStoreHelper,
+    private val userPreferences: com.ytmusic.downloader.data.preferences.UserPreferences
 ) {
 
     /**
@@ -69,10 +70,11 @@ class DownloadRepository(
             )
             onProgress(90)
 
-            // 6. Save to public MediaStore Music folder
+            // 6. Save to public MediaStore Music folder or Custom SAF Directory
             val savedUriOrPath = mediaStoreHelper.saveToMediaStore(
                 sourceFile = if (tempTaggedFile.exists()) tempTaggedFile else tempRawFile,
-                track = currentTrack
+                track = currentTrack,
+                customTreeUri = userPreferences.customDownloadUri
             )
 
             // Clean temporary files

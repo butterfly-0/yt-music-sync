@@ -13,6 +13,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists ORDER BY isLikedMusic DESC, title ASC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
+    @Query("SELECT * FROM playlists ORDER BY isLikedMusic DESC, title ASC")
+    suspend fun getAllPlaylistsSync(): List<PlaylistEntity>
+
     @Query("SELECT * FROM playlists WHERE isEnabled = 1")
     suspend fun getEnabledPlaylists(): List<PlaylistEntity>
 

@@ -1,6 +1,8 @@
 package com.ytmusic.downloader.ui.viewmodel
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ytmusic.downloader.YTMusicApp
@@ -17,6 +19,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val userPrefs = app.userPreferences
     private val youtubeExtractor = app.youtubeExtractor
     val appUpdateManager = app.appUpdateManager
+    private val mediaStoreHelper = app.mediaStoreHelper
     val updateState = appUpdateManager.updateState
 
     val isLoggedIn: StateFlow<Boolean> = userPrefs.isLoggedInFlow
@@ -41,6 +44,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _isSyncOnlyNew = MutableStateFlow(userPrefs.isSyncOnlyNew)
     val isSyncOnlyNew: StateFlow<Boolean> = _isSyncOnlyNew.asStateFlow()
+
+    private val _customDownloadDisplayName = MutableStateFlow(userPrefs.customDownloadDisplayName)
+    val customDownloadDisplayName: StateFlow<String> = _customDownloadDisplayName.asStateFlow()
 
     init {
         refreshProfile()
@@ -72,6 +78,28 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setSyncOnlyNew(syncOnlyNew: Boolean) {
         userPrefs.isSyncOnlyNew = syncOnlyNew
         _isSyncOnlyNew.value = syncOnlyNew
+    }
+
+    fun setCustomDownloadFolder(uri: Uri, displayName: String) {
+        try {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            app.contentResolver.takePersistableUriPermission(uri, flags)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        userPrefs.customDownloadUri = uri.toString()
+        userPrefs.customDownloadDisplayName = displayName
+        _customDownloadDisplayName.value = displayName
+    }
+
+    fun resetToDefaultMusicFolder() {
+        userPrefs.customDownloadUri = ""
+        userPrefs.customDownloadDisplayName = "Music/YouTubeSync"
+        _customDownloadDisplayName.value = "Music/YouTubeSync"
+    }
+
+    fun openMusicFolder() {
+        mediaStoreHelper.openMusicFolder(userPrefs.customDownloadUri)
     }
 
     fun refreshProfile() {

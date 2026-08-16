@@ -62,6 +62,46 @@ class YouTubeClient(private val getCookies: () -> String) {
     }
 
     /**
+     * Executes Innertube request with customized Client (e.g. iOS or Android VR).
+     */
+    suspend fun postInnertubeWithClient(
+        endpoint: String,
+        requestBody: JsonObject,
+        clientName: String,
+        clientVersion: String
+    ): JsonObject? = withContext(Dispatchers.IO) {
+        val url = "https://www.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"
+        val cookies = getCookies()
+
+        val userAgent = when (clientName) {
+            "IOS" -> "com.google.ios.youtube/$clientVersion (iPhone14,3; U; CPU iOS 17_5_1 like Mac OS X)"
+            "ANDROID_VR" -> "Mozilla/5.0 (Quest 2) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0"
+            else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+
+        val requestBuilder = Request.Builder()
+            .url(url)
+            .post(requestBody.toString().toRequestBody(jsonMediaType))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("User-Agent", userAgent)
+            .addHeader("X-YouTube-Client-Name", if (clientName == "IOS") "5" else "28")
+            .addHeader("X-YouTube-Client-Version", clientVersion)
+
+        if (cookies.isNotBlank()) {
+            requestBuilder.addHeader("Cookie", cookies)
+        }
+
+        try {
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            val bodyString = response.body?.string() ?: return@withContext null
+            JsonParser.parseString(bodyString).asJsonObject
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
      * Executes standard YouTube Web Innertube API request.
      */
     suspend fun postWebInnertube(endpoint: String, requestBody: JsonObject): JsonObject? = withContext(Dispatchers.IO) {
@@ -103,7 +143,7 @@ class YouTubeClient(private val getCookies: () -> String) {
     }
 
     /**
-     * Executes Android Innertube API request (often used for player stream extraction).
+     * Executes Android Innertube API request.
      */
     suspend fun postAndroidInnertube(endpoint: String, requestBody: JsonObject): JsonObject? = withContext(Dispatchers.IO) {
         val url = "https://www.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"

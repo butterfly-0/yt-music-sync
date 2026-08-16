@@ -28,18 +28,44 @@ class YouTubeRepository(
     }
 
     /**
+     * Automatically syncs and updates user's library playlists from their YouTube account.
+     */
+    suspend fun syncUserPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
+        val fetchedPlaylists = extractor.getUserPlaylists()
+        for (playlist in fetchedPlaylists) {
+            val existing = playlistDao.getPlaylistById(playlist.id)
+            if (existing == null) {
+                playlistDao.insertPlaylist(PlaylistEntity.fromDomain(playlist))
+            } else {
+                playlistDao.updatePlaylist(
+                    existing.copy(
+                        title = playlist.title.ifBlank { existing.title },
+                        trackCount = if (playlist.trackCount > 0) playlist.trackCount else existing.trackCount,
+                        thumbnailUrl = playlist.thumbnailUrl ?: existing.thumbnailUrl
+                    )
+                )
+            }
+        }
+        playlistDao.getAllPlaylistsSync().map { it.toDomain() }
+    }
+
+    /**
      * Discovers new tracks to download across all active playlists.
      */
     suspend fun findNewTracksToDownload(): List<Track> = withContext(Dispatchers.IO) {
         val newTracks = mutableListOf<Track>()
         val alreadyDownloadedIds = trackDao.getAllDownloadedTrackIds().toSet()
+
+        // Sync and refresh playlists first
+        syncUserPlaylists()
+
         val enabledPlaylists = playlistDao.getEnabledPlaylists()
 
         for (playlistEntity in enabledPlaylists) {
             try {
-                val fetchedTracks = extractor.getPlaylistTracks(playlistEntity.id, maxTracks = 50)
-                
-                // Update playlist track count
+                val fetchedTracks = extractor.getPlaylistTracks(playlistEntity.id, maxTracks = 100)
+
+                // Update playlist track count & thumbnail
                 playlistDao.updatePlaylist(
                     playlistEntity.copy(
                         trackCount = fetchedTracks.size,
@@ -73,49 +99,51 @@ class YouTubeRepository(
             }
 
             val tracks = extractor.getPlaylistTracks(playlistId, maxTracks = 10)
-            val title = customTitle?.takeIf { it.isNotBlank() } ?: "Плейлист $playlistId"
+            val title = customTitle?.ifBlank { null } ?: "Плейлист ($playlistId)"
+            val thumb = tracks.firstOrNull()?.thumbnailUrl
 
-            val playlistEntity = PlaylistEntity(
+            val entity = PlaylistEntity(
                 id = playlistId,
                 title = title,
-                url = if (urlOrId.startsWith("http")) urlOrId else "https://music.youtube.com/playlist?list=$playlistId",
+                url = "https://music.youtube.com/playlist?list=$playlistId",
                 isLikedMusic = playlistId == "LM" || playlistId == "LL",
                 isEnabled = true,
-                syncOnlyNew = userPreferences.isSyncOnlyNew,
-                lastSyncedAt = 0,
+                syncOnlyNew = false,
+                lastSyncedAt = System.currentTimeMillis(),
                 trackCount = tracks.size,
-                thumbnailUrl = tracks.firstOrNull()?.thumbnailUrl
+                thumbnailUrl = thumb
             )
 
-            playlistDao.insertPlaylist(playlistEntity)
-            Result.success(playlistEntity.toDomain())
+            playlistDao.insertPlaylist(entity)
+            Result.success(entity.toDomain())
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
         }
     }
 
-    suspend fun updatePlaylistEnabled(playlistId: String, isEnabled: Boolean) = withContext(Dispatchers.IO) {
-        val playlist = playlistDao.getPlaylistById(playlistId) ?: return@withContext
-        playlistDao.updatePlaylist(playlist.copy(isEnabled = isEnabled))
+    suspend fun updatePlaylistEnabled(playlist: Playlist, enabled: Boolean) = withContext(Dispatchers.IO) {
+        val entity = playlistDao.getPlaylistById(playlist.id) ?: return@withContext
+        playlistDao.updatePlaylist(entity.copy(isEnabled = enabled))
     }
 
-    suspend fun updatePlaylistSyncOnlyNew(playlistId: String, syncOnlyNew: Boolean) = withContext(Dispatchers.IO) {
-        val playlist = playlistDao.getPlaylistById(playlistId) ?: return@withContext
-        playlistDao.updatePlaylist(playlist.copy(syncOnlyNew = syncOnlyNew))
+    suspend fun updatePlaylistSyncOnlyNew(playlist: Playlist, syncOnlyNew: Boolean) = withContext(Dispatchers.IO) {
+        val entity = playlistDao.getPlaylistById(playlist.id) ?: return@withContext
+        playlistDao.updatePlaylist(entity.copy(syncOnlyNew = syncOnlyNew))
     }
 
-    suspend fun deletePlaylist(playlistId: String) = withContext(Dispatchers.IO) {
-        playlistDao.deletePlaylistById(playlistId)
+    suspend fun deletePlaylist(playlist: Playlist) = withContext(Dispatchers.IO) {
+        if (!playlist.isLikedMusic) {
+            playlistDao.deletePlaylistById(playlist.id)
+        }
     }
 
     private fun extractPlaylistId(input: String): String? {
         val trimmed = input.trim()
-        if (trimmed == "LM" || trimmed == "LL") return trimmed
-        if (!trimmed.startsWith("http")) return trimmed
-
+        if (trimmed.startsWith("PL") || trimmed.startsWith("RD") || trimmed.startsWith("OLAK5uy_") || trimmed == "LM" || trimmed == "LL") {
+            return trimmed
+        }
         val regex = Regex("[?&]list=([a-zA-Z0-9_-]+)")
-        val match = regex.find(trimmed)
-        return match?.groupValues?.get(1)
+        return regex.find(trimmed)?.groupValues?.get(1)
     }
 }

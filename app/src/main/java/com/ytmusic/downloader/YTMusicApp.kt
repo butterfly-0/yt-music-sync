@@ -67,7 +67,8 @@ class YTMusicApp : Application() {
             trackDao = database.trackDao(),
             extractor = youtubeExtractor,
             audioTagger = audioTagger,
-            mediaStoreHelper = mediaStoreHelper
+            mediaStoreHelper = mediaStoreHelper,
+            userPreferences = userPreferences
         )
 
         youtubeRepository = YouTubeRepository(

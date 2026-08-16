@@ -8,7 +8,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,8 +51,6 @@ import com.ytmusic.downloader.ui.theme.AccentRed
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.DarkCard
 import com.ytmusic.downloader.ui.theme.DarkSurface
-import com.ytmusic.downloader.ui.theme.GlassBorder
-import com.ytmusic.downloader.ui.theme.GlassSurface
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.viewmodel.SettingsViewModel
@@ -72,6 +69,8 @@ fun LoginScreen(
 
     fun captureAndSaveAllCookies(): Boolean {
         val cookieManager = CookieManager.getInstance()
+        cookieManager.flush()
+
         val urls = listOf(
             "https://music.youtube.com",
             "https://www.youtube.com",
@@ -153,7 +152,7 @@ fun LoginScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (hasDetectedSession) "Сесію успішно знайдено!" else "Введіть логін та пароль у вікні нижче",
+                            text = if (hasDetectedSession) "Сесію успішно знайдено!" else "Введіть дані акаунту нижче",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = if (hasDetectedSession) AccentGreen else TextSecondary,
                                 fontSize = 11.sp
@@ -194,26 +193,9 @@ fun LoginScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                if (captureAndSaveAllCookies() && url?.contains("music.youtube.com") == true) {
-                                    onLoginSuccess()
-                                }
-                            }
-
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
-                                if (captureAndSaveAllCookies() && url?.contains("music.youtube.com") == true) {
-                                    onLoginSuccess()
-                                }
-                            }
-
-                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                val url = request?.url?.toString()
-                                if (captureAndSaveAllCookies() && url?.contains("music.youtube.com") == true) {
-                                    onLoginSuccess()
-                                }
-                                return false
+                                captureAndSaveAllCookies()
                             }
                         }
 
@@ -232,12 +214,8 @@ fun LoginScreen(
         ) {
             Button(
                 onClick = {
-                    if (captureAndSaveAllCookies()) {
-                        onLoginSuccess()
-                    } else {
-                        // Attempt fallback redirect to ensure cookies are populated
-                        onLoginSuccess()
-                    }
+                    captureAndSaveAllCookies()
+                    onLoginSuccess()
                 },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -260,7 +238,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (hasDetectedSession) "Сесію знайдено — Перейти до додатку" else "Зберегти вхід та продовжити",
+                        text = if (hasDetectedSession) "Сесію знайдено — Перейти до музики" else "Зберегти вхід та перейти",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White

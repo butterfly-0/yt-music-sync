@@ -1,5 +1,8 @@
 package com.ytmusic.downloader.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,8 +27,10 @@ import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
@@ -48,18 +53,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ytmusic.downloader.R
 import com.ytmusic.downloader.data.model.AudioFormat
 import com.ytmusic.downloader.ui.theme.AccentBlue
 import com.ytmusic.downloader.ui.theme.AccentGreen
 import com.ytmusic.downloader.ui.theme.AccentRed
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.DarkCard
-import com.ytmusic.downloader.ui.theme.DarkCardElevated
 import com.ytmusic.downloader.ui.theme.DarkSurface
 import com.ytmusic.downloader.ui.theme.GlassBorder
 import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
@@ -83,6 +85,17 @@ fun SettingsScreen(
     val isWifiOnly by viewModel.isWifiOnly.collectAsState()
     val isChargingOnly by viewModel.isChargingOnly.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val storageDisplayName by viewModel.customDownloadDisplayName.collectAsState()
+
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val path = uri.path ?: uri.toString()
+            val friendlyName = path.substringAfterLast(":").ifBlank { "Обрана папка" }
+            viewModel.setCustomDownloadFolder(uri, friendlyName)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -106,7 +119,7 @@ fun SettingsScreen(
                 )
             )
             Text(
-                text = "Параметри акаунту, якості та оновлень",
+                text = "Параметри акаунту, сховища та оновлень",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = TextSecondary,
                     fontSize = 13.sp
@@ -203,6 +216,84 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // Section: Storage & Directory
+        SettingsSectionHeader("СХОВИЩЕ ТА ПАПКА ДЛЯ МУЗИКИ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { viewModel.openMusicFolder() }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        tint = AccentBlue,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Системна папка аудіо",
+                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
+                        )
+                        Text(
+                            text = storageDisplayName,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = AccentBlue,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        contentDescription = "Відкрити",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { folderPickerLauncher.launch(null) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Змінити теку", color = TextPrimary, fontSize = 13.sp)
+                    }
+
+                    if (storageDisplayName != "Music/YouTubeSync") {
+                        OutlinedButton(
+                            onClick = { viewModel.resetToDefaultMusicFolder() },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Скинути", color = TextSecondary, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
         // Section: Audio Format & Quality
         SettingsSectionHeader("ФОРМАТ ТА ЯКІСТЬ")
         Box(
@@ -273,7 +364,7 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // iOS Segmented Pills
+                // Segmented Pills
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -485,44 +576,6 @@ fun SettingsScreen(
                             }
                         }
                     }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Section: Storage info
-        SettingsSectionHeader("СХОВИЩЕ")
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Системна папка аудіо",
-                        style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
-                    )
-                    Text(
-                        text = "Music/YouTubeSync/ (автоматично доступно у плеєрах)",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    )
                 }
             }
         }

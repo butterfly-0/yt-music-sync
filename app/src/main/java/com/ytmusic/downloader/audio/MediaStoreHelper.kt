@@ -1,33 +1,60 @@
 package com.ytmusic.downloader.audio
 
+import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import com.ytmusic.downloader.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileOutputStream
 
 class MediaStoreHelper(private val context: Context) {
 
     /**
-     * Saves audio file to system Music directory and indexes it via MediaStore.
+     * Saves audio file to system Music directory or custom SAF directory and indexes it.
      */
     suspend fun saveToMediaStore(
         sourceFile: File,
         track: Track,
+        customTreeUri: String? = null,
         subFolder: String = "YouTubeSync"
     ): String? = withContext(Dispatchers.IO) {
         val fileName = sanitizeFileName("${track.artist} - ${track.title}.${track.format.extension}")
 
+        // 1. Custom User-Selected SAF Directory
+        if (!customTreeUri.isNullOrBlank()) {
+            try {
+                val treeUri = Uri.parse(customTreeUri)
+                val targetDir = DocumentFile.fromTreeUri(context, treeUri)
+                if (targetDir != null && targetDir.canWrite()) {
+                    // Check if file already exists in custom dir
+                    targetDir.findFile(fileName)?.delete()
+                    val newFile = targetDir.createFile(track.format.mimeType, fileName)
+                    if (newFile != null) {
+                        context.contentResolver.openOutputStream(newFile.uri)?.use { out ->
+                            FileInputStream(sourceFile).use { input ->
+                                input.copyTo(out)
+                            }
+                        }
+                        return@withContext newFile.uri.toString()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 2. Default Public MediaStore Music Folder
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+ Scoped Storage using MediaStore ContentResolver
             val contentValues = ContentValues().apply {
                 put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Audio.Media.TITLE, track.title)
@@ -62,7 +89,7 @@ class MediaStoreHelper(private val context: Context) {
                 null
             }
         } else {
-            // Android 9 and lower: direct file write to Environment.DIRECTORY_MUSIC
+            // Android 9 and lower
             try {
                 val musicDir = File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
@@ -74,7 +101,6 @@ class MediaStoreHelper(private val context: Context) {
                 val destFile = File(musicDir, fileName)
                 sourceFile.copyTo(destFile, overwrite = true)
 
-                // Scan file to make it immediately visible
                 MediaScannerConnection.scanFile(
                     context,
                     arrayOf(destFile.absolutePath),
@@ -86,6 +112,43 @@ class MediaStoreHelper(private val context: Context) {
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
+            }
+        }
+    }
+
+    /**
+     * Opens the music storage folder in the system file manager.
+     */
+    fun openMusicFolder(customTreeUri: String? = null) {
+        if (!customTreeUri.isNullOrBlank()) {
+            try {
+                val treeUri = Uri.parse(customTreeUri)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(treeUri, DocumentsContract.Document.MIME_TYPE_DIR)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                }
+                context.startActivity(Intent.createChooser(intent, "Відкрити папку з музикою"))
+                return
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // Fallback: Open system Downloads / Music file manager
+        try {
+            val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "vnd.android.cursor.dir/audio")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(Intent.createChooser(intent, "Відкрити аудіофайли"))
+            } catch (ex: Exception) {
+                ex.printStackTrace()
             }
         }
     }
