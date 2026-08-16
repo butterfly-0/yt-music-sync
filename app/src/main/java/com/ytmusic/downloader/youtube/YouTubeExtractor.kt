@@ -18,7 +18,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     /**
-     * Fetches all real music playlists from user's YouTube Music library.
+     * Fetches only real music playlists created or saved by the user.
      */
     suspend fun getUserPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<Playlist>()
@@ -38,11 +38,9 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             )
         )
 
-        // 2. Query YouTube Music Library Endpoints
+        // 2. Query YouTube Music Liked/Saved Playlists Endpoints (Strictly user's playlists, never artists/channels)
         val candidateEndpoints = listOf(
             "FEmusic_liked_playlists",
-            "FEmusic_library_playlists",
-            "FEmusic_library_landing",
             "FEplaylist_aggregated"
         )
 
@@ -58,7 +56,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             }
         }
 
-        // 3. Fallback: Query YouTube Web Guide & Library Endpoints
+        // 3. YouTube Web Playlists Aggregated Library
         val webLibrary = client.postWebInnertube("browse", JsonObject().apply {
             add("context", getWebContext())
             addProperty("browseId", "FEplaylist_aggregated")
@@ -67,7 +65,6 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             extractPlaylistsRecursively(webLibrary, playlists)
         }
 
-        // Distinct and strict filter
         playlists.filter { isValidPlaylist(it) }.distinctBy { it.id }
     }
 
@@ -124,7 +121,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     }
 
     /**
-     * Extracts direct audio stream URL with multi-client fallbacks (iOS, Android VR, Web, Cobalt, Piped).
+     * Extracts direct audio stream URL with multi-client fallbacks (iOS, Android VR, Web, Cobalt, Piped, Invidious).
      */
     suspend fun getAudioStreamUrl(videoId: String, preferredFormat: AudioFormat = AudioFormat.M4A): AudioStreamInfo? = withContext(Dispatchers.IO) {
         // 1. Try iOS Client (direct unthrottled audio streams without cipher)
@@ -176,7 +173,46 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             e.printStackTrace()
         }
 
-        // 4. Try Piped API Instances Fallback
+        // 4. Try Cobalt API
+        val cobaltInstances = listOf(
+            "https://api.cobalt.tools",
+            "https://cobalt.api.timelessoses.moe",
+            "https://co.wuk.sh/api/json"
+        )
+        for (cobaltUrl in cobaltInstances) {
+            try {
+                val jsonPayload = JsonObject().apply {
+                    addProperty("url", "https://www.youtube.com/watch?v=$videoId")
+                    addProperty("downloadMode", "audio")
+                    addProperty("audioFormat", "best")
+                }
+                val req = Request.Builder()
+                    .url(if (cobaltUrl.endsWith("/api/json")) cobaltUrl else "$cobaltUrl/")
+                    .post(jsonPayload.toString().toRequestBody(jsonMediaType))
+                    .addHeader("Accept", "application/json")
+                    .addHeader("Content-Type", "application/json")
+                    .build()
+
+                val resp = client.getHttpClient().newCall(req).execute()
+                val body = resp.body?.string()
+                if (!body.isNullOrBlank()) {
+                    val json = JsonParser.parseString(body).asJsonObject
+                    val streamUrl = json.get("url")?.asString
+                    if (!streamUrl.isNullOrBlank()) {
+                        return@withContext AudioStreamInfo(
+                            url = streamUrl,
+                            mimeType = "audio/mp4",
+                            bitrate = 256000,
+                            durationMs = 0L
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Continue
+            }
+        }
+
+        // 5. Try Piped API Instances Fallback
         val pipedInstances = listOf(
             "https://pipedapi.kavin.rocks",
             "https://api.piped.private.coffee",
@@ -207,7 +243,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
                     }
                 }
             } catch (e: Exception) {
-                // Continue to next instance
+                // Continue
             }
         }
 
@@ -300,7 +336,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         if (element.isJsonObject) {
             val obj = element.asJsonObject
 
-            // 1. YouTube Music Standard Two-Row Item (Primary Playlist Format)
+            // 1. YouTube Music Standard Two-Row Item
             if (obj.has("musicTwoRowItemRenderer")) {
                 val renderer = obj.getAsJsonObject("musicTwoRowItemRenderer")
                 parseMusicTwoRowItemPlaylist(renderer)?.let {
@@ -397,7 +433,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             val subtitleRuns = item.getAsJsonObject("subtitle")?.getAsJsonArray("runs")
             if (subtitleRuns != null) {
                 val subtitleText = (0 until subtitleRuns.size()).joinToString("") { subtitleRuns[it].asJsonObject.get("text")?.asString ?: "" }
-                if (subtitleText.contains("підписник", ignoreCase = true) || subtitleText.contains("subscribers", ignoreCase = true)) {
+                if (subtitleText.contains("підписник", ignoreCase = true) || subtitleText.contains("subscribers", ignoreCase = true) || subtitleText.contains("виконавець", ignoreCase = true)) {
                     return null // Channel/Artist, not playlist!
                 }
                 for (i in 0 until subtitleRuns.size()) {
@@ -556,18 +592,16 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     private fun isValidPlaylistId(id: String): Boolean {
         if (id.isBlank()) return false
         if (id == "LM") return true
-        if (id == "LL") return false // Remove LL
-        if (id.startsWith("UC") || id.startsWith("FE") || id.contains("channel/") || id.contains("artist/")) {
+        if (id == "LL") return false // Reject LL
+        val clean = id.removePrefix("VL")
+        if (clean.startsWith("UC") || clean.startsWith("FE") || clean.startsWith("MPRE") || clean.contains("channel/") || clean.contains("artist/")) {
             return false
         }
-        return id.startsWith("PL") || id.startsWith("RD") || id.startsWith("OLAK5uy_") || id.length >= 10
+        return clean.startsWith("PL") || clean.startsWith("RD") || clean.startsWith("OLAK5uy_")
     }
 
     private fun isValidPlaylist(playlist: Playlist): Boolean {
-        if (playlist.id == "LM") return true
-        if (playlist.id == "LL") return false
-        if (playlist.id.startsWith("UC") || playlist.id.startsWith("FE")) return false
-        return true
+        return isValidPlaylistId(playlist.id)
     }
 
     private fun extractTracksRecursively(
@@ -793,4 +827,3 @@ data class UserProfile(
     val name: String,
     val email: String
 )
-

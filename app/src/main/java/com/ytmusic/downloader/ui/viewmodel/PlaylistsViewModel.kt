@@ -17,6 +17,7 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val app = application as YTMusicApp
     private val youtubeRepository = app.youtubeRepository
+    private val trackDao = app.database.trackDao()
     private val extractor = app.youtubeExtractor
     private val downloadRepo = app.downloadRepository
     private val previewPlayer = app.audioPreviewPlayer
@@ -40,6 +41,12 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isLoadingTracks = MutableStateFlow(false)
     val isLoadingTracks: StateFlow<Boolean> = _isLoadingTracks.asStateFlow()
+
+    private val _downloadingTrackIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadingTrackIds: StateFlow<Set<String>> = _downloadingTrackIds.asStateFlow()
+
+    private val _downloadedTrackIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadedTrackIds: StateFlow<Set<String>> = _downloadedTrackIds.asStateFlow()
 
     val currentPlayingTrackId: StateFlow<String?> = previewPlayer.currentPlayingTrackId
     val isPlaying: StateFlow<Boolean> = previewPlayer.isPlaying
@@ -65,6 +72,9 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
         viewModelScope.launch {
             try {
+                val downloadedIds = trackDao.getAllDownloadedTrackIds().toSet()
+                _downloadedTrackIds.value = downloadedIds
+
                 val tracks = extractor.getPlaylistTracks(playlist.id, maxTracks = 150)
                 _playlistTracks.value = tracks
             } catch (e: Exception) {
@@ -83,7 +93,17 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun downloadSingleTrack(track: Track) {
         viewModelScope.launch {
-            downloadRepo.downloadAndSaveTrack(track, userPrefs.audioFormat)
+            _downloadingTrackIds.value = _downloadingTrackIds.value + track.id
+            try {
+                val result = downloadRepo.downloadAndSaveTrack(track, userPrefs.audioFormat)
+                if (result.isSuccess) {
+                    _downloadedTrackIds.value = _downloadedTrackIds.value + track.id
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _downloadingTrackIds.value = _downloadingTrackIds.value - track.id
+            }
         }
     }
 

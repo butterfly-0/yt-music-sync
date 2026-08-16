@@ -105,6 +105,22 @@ class UserPreferences(context: Context) {
         get() = prefs.getString(KEY_CUSTOM_DOWNLOAD_NAME, "Music/YouTubeSync") ?: "Music/YouTubeSync"
         set(value) = prefs.edit().putString(KEY_CUSTOM_DOWNLOAD_NAME, value).apply()
 
+    fun getDeletedPlaylistIds(): Set<String> {
+        return prefs.getStringSet(KEY_DELETED_PLAYLIST_IDS, emptySet()) ?: emptySet()
+    }
+
+    fun addDeletedPlaylistId(id: String) {
+        val current = getDeletedPlaylistIds().toMutableSet()
+        current.add(id)
+        prefs.edit().putStringSet(KEY_DELETED_PLAYLIST_IDS, current).apply()
+    }
+
+    fun removeDeletedPlaylistId(id: String) {
+        val current = getDeletedPlaylistIds().toMutableSet()
+        current.remove(id)
+        prefs.edit().putStringSet(KEY_DELETED_PLAYLIST_IDS, current).apply()
+    }
+
     fun clearAuth() {
         cookies = ""
         accountName = ""
@@ -126,5 +142,6 @@ class UserPreferences(context: Context) {
         private const val KEY_LAST_SYNC_COUNT = "key_last_sync_count"
         private const val KEY_CUSTOM_DOWNLOAD_URI = "key_custom_download_uri"
         private const val KEY_CUSTOM_DOWNLOAD_NAME = "key_custom_download_name"
+        private const val KEY_DELETED_PLAYLIST_IDS = "key_deleted_playlist_ids"
     }
 }

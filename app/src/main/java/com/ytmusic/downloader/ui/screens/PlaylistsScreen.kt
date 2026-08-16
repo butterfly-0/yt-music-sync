@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
@@ -94,6 +95,8 @@ fun PlaylistsScreen(
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
     val playlistTracks by viewModel.playlistTracks.collectAsState()
     val isLoadingTracks by viewModel.isLoadingTracks.collectAsState()
+    val downloadingTrackIds by viewModel.downloadingTrackIds.collectAsState()
+    val downloadedTrackIds by viewModel.downloadedTrackIds.collectAsState()
     val currentPlayingTrackId by viewModel.currentPlayingTrackId.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
 
@@ -420,19 +423,53 @@ fun PlaylistsScreen(
                                     )
                                 }
 
-                                IconButton(
-                                    onClick = { viewModel.downloadSingleTrack(track) },
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(AccentRed.copy(alpha = 0.15f))
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = "Завантажити трек",
-                                        tint = AccentRed,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                val isDownloading = downloadingTrackIds.contains(track.id)
+                                val isDownloaded = downloadedTrackIds.contains(track.id)
+
+                                if (isDownloading) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(AccentRed.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = AccentRed,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                } else if (isDownloaded) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(AccentGreen.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Завантажено",
+                                            tint = AccentGreen,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = { viewModel.downloadSingleTrack(track) },
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(AccentRed.copy(alpha = 0.15f))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = "Завантажити трек",
+                                            tint = AccentRed,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -31,9 +31,22 @@ class YouTubeRepository(
      * Automatically syncs and updates user's library playlists from their YouTube account.
      */
     suspend fun syncUserPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
-        playlistDao.deletePlaylistById("LL")
+        // Clean up unwanted playlists (channels, artist profiles, LL)
+        val existingInDb = playlistDao.getAllPlaylistsSync()
+        for (item in existingInDb) {
+            if (item.id.startsWith("UC") || item.id.startsWith("MPRE") || item.id.startsWith("FE") || item.id == "LL") {
+                playlistDao.deletePlaylist(item)
+            }
+        }
+
+        val deletedIds = userPreferences.getDeletedPlaylistIds()
         val fetchedPlaylists = extractor.getUserPlaylists()
+
         for (playlist in fetchedPlaylists) {
+            if (deletedIds.contains(playlist.id)) {
+                continue // Do not resurrect user-deleted playlists
+            }
+
             val existing = playlistDao.getPlaylistById(playlist.id)
             if (existing == null) {
                 playlistDao.insertPlaylist(PlaylistEntity.fromDomain(playlist))
@@ -56,9 +69,6 @@ class YouTubeRepository(
     suspend fun findNewTracksToDownload(): List<Track> = withContext(Dispatchers.IO) {
         val newTracks = mutableListOf<Track>()
         val alreadyDownloadedIds = trackDao.getAllDownloadedTrackIds().toSet()
-
-        // Sync and refresh playlists first
-        syncUserPlaylists()
 
         val enabledPlaylists = playlistDao.getEnabledPlaylists()
 
@@ -94,6 +104,8 @@ class YouTubeRepository(
             val playlistId = extractPlaylistId(urlOrId)
                 ?: return@withContext Result.failure(Exception("Невірне посилання на плейлист YouTube"))
 
+            userPreferences.removeDeletedPlaylistId(playlistId)
+
             val existing = playlistDao.getPlaylistById(playlistId)
             if (existing != null) {
                 return@withContext Result.success(existing.toDomain())
@@ -107,7 +119,7 @@ class YouTubeRepository(
                 id = playlistId,
                 title = title,
                 url = "https://music.youtube.com/playlist?list=$playlistId",
-                isLikedMusic = playlistId == "LM" || playlistId == "LL",
+                isLikedMusic = playlistId == "LM",
                 isEnabled = true,
                 syncOnlyNew = false,
                 lastSyncedAt = System.currentTimeMillis(),
@@ -135,13 +147,14 @@ class YouTubeRepository(
 
     suspend fun deletePlaylist(playlist: Playlist) = withContext(Dispatchers.IO) {
         if (!playlist.isLikedMusic) {
+            userPreferences.addDeletedPlaylistId(playlist.id)
             playlistDao.deletePlaylistById(playlist.id)
         }
     }
 
     private fun extractPlaylistId(input: String): String? {
         val trimmed = input.trim()
-        if (trimmed.startsWith("PL") || trimmed.startsWith("RD") || trimmed.startsWith("OLAK5uy_") || trimmed == "LM" || trimmed == "LL") {
+        if (trimmed.startsWith("PL") || trimmed.startsWith("RD") || trimmed.startsWith("OLAK5uy_") || trimmed == "LM") {
             return trimmed
         }
         val regex = Regex("[?&]list=([a-zA-Z0-9_-]+)")
