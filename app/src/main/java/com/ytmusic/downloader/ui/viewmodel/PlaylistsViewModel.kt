@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ytmusic.downloader.YTMusicApp
 import com.ytmusic.downloader.data.model.Playlist
+import com.ytmusic.downloader.data.model.Track
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,10 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val app = application as YTMusicApp
     private val youtubeRepository = app.youtubeRepository
+    private val extractor = app.youtubeExtractor
+    private val downloadRepo = app.downloadRepository
+    private val previewPlayer = app.audioPreviewPlayer
+    private val userPrefs = app.userPreferences
 
     val playlists: StateFlow<List<Playlist>> = youtubeRepository.getAllPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -25,6 +30,19 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isAddingPlaylist = MutableStateFlow(false)
     val isAddingPlaylist: StateFlow<Boolean> = _isAddingPlaylist.asStateFlow()
+
+    // Playlist Details Modal / Screen
+    private val _selectedPlaylist = MutableStateFlow<Playlist?>(null)
+    val selectedPlaylist: StateFlow<Playlist?> = _selectedPlaylist.asStateFlow()
+
+    private val _playlistTracks = MutableStateFlow<List<Track>>(emptyList())
+    val playlistTracks: StateFlow<List<Track>> = _playlistTracks.asStateFlow()
+
+    private val _isLoadingTracks = MutableStateFlow(false)
+    val isLoadingTracks: StateFlow<Boolean> = _isLoadingTracks.asStateFlow()
+
+    val currentPlayingTrackId: StateFlow<String?> = previewPlayer.currentPlayingTrackId
+    val isPlaying: StateFlow<Boolean> = previewPlayer.isPlaying
 
     init {
         syncPlaylists()
@@ -37,6 +55,42 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun selectPlaylist(playlist: Playlist) {
+        _selectedPlaylist.value = playlist
+        _playlistTracks.value = emptyList()
+        _isLoadingTracks.value = true
+
+        viewModelScope.launch {
+            try {
+                val tracks = extractor.getPlaylistTracks(playlist.id, maxTracks = 150)
+                _playlistTracks.value = tracks
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isLoadingTracks.value = false
+            }
+        }
+    }
+
+    fun closePlaylistDetail() {
+        _selectedPlaylist.value = null
+        _playlistTracks.value = emptyList()
+        _isLoadingTracks.value = false
+    }
+
+    fun downloadSingleTrack(track: Track) {
+        viewModelScope.launch {
+            downloadRepo.downloadAndSaveTrack(track, userPrefs.audioFormat)
+        }
+    }
+
+    fun togglePlayPreview(track: Track) {
+        val path = track.localFilePath
+        if (!path.isNullOrBlank()) {
+            previewPlayer.playOrPause(track.id, path)
         }
     }
 
@@ -71,6 +125,9 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
             youtubeRepository.deletePlaylist(playlist)
+            if (_selectedPlaylist.value?.id == playlist.id) {
+                closePlaylistDetail()
+            }
         }
     }
 }

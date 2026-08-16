@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class MediaStoreHelper(private val context: Context) {
 
@@ -113,6 +114,53 @@ class MediaStoreHelper(private val context: Context) {
                 e.printStackTrace()
                 null
             }
+        }
+    }
+
+    /**
+     * Saves lyrics (.lrc file) alongside the audio file.
+     */
+    suspend fun saveLyricsFile(
+        track: Track,
+        lyricsContent: String,
+        customTreeUri: String? = null,
+        subFolder: String = "YouTubeSync"
+    ) = withContext(Dispatchers.IO) {
+        if (lyricsContent.isBlank()) return@withContext
+        val fileName = sanitizeFileName("${track.artist} - ${track.title}.lrc")
+
+        // 1. Custom SAF Directory
+        if (!customTreeUri.isNullOrBlank()) {
+            try {
+                val treeUri = Uri.parse(customTreeUri)
+                val targetDir = DocumentFile.fromTreeUri(context, treeUri)
+                if (targetDir != null && targetDir.canWrite()) {
+                    targetDir.findFile(fileName)?.delete()
+                    val newFile = targetDir.createFile("text/plain", fileName)
+                    if (newFile != null) {
+                        context.contentResolver.openOutputStream(newFile.uri)?.use { out ->
+                            out.write(lyricsContent.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                    return@withContext
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 2. Local File in Music Directory (Android 9 or direct storage)
+        try {
+            val musicDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+                subFolder
+            ).apply { if (!exists()) mkdirs() }
+            val lrcFile = File(musicDir, fileName)
+            FileOutputStream(lrcFile).use { out ->
+                out.write(lyricsContent.toByteArray(Charsets.UTF_8))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

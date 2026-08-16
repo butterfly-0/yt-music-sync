@@ -30,6 +30,9 @@ class YTMusicApp : Application() {
     lateinit var audioTagger: AudioTagger
         private set
 
+    lateinit var lyricsHelper: com.ytmusic.downloader.audio.LyricsHelper
+        private set
+
     lateinit var mediaStoreHelper: MediaStoreHelper
         private set
 
@@ -59,6 +62,7 @@ class YTMusicApp : Application() {
 
         youtubeClient = YouTubeClient(getCookies = { userPreferences.cookies })
         youtubeExtractor = YouTubeExtractor(youtubeClient)
+        lyricsHelper = com.ytmusic.downloader.audio.LyricsHelper(youtubeClient.getHttpClient())
         audioTagger = AudioTagger(this, youtubeClient.getHttpClient())
         mediaStoreHelper = MediaStoreHelper(this)
 
@@ -67,6 +71,7 @@ class YTMusicApp : Application() {
             trackDao = database.trackDao(),
             extractor = youtubeExtractor,
             audioTagger = audioTagger,
+            lyricsHelper = lyricsHelper,
             mediaStoreHelper = mediaStoreHelper,
             userPreferences = userPreferences
         )

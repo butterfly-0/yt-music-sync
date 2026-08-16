@@ -26,7 +26,14 @@ class AudioTagger(
         targetFile: File,
         onProgress: (percent: Int) -> Unit
     ): Boolean = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(streamUrl).build()
+        val request = Request.Builder()
+            .url(streamUrl)
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .addHeader("Accept-Encoding", "identity")
+            .addHeader("Range", "bytes=0-")
+            .addHeader("Referer", "https://music.youtube.com/")
+            .build()
+
         try {
             val response = okHttpClient.newCall(request).execute()
             val body = response.body ?: return@withContext false
@@ -43,7 +50,7 @@ class AudioTagger(
                 outputStream.write(buffer, 0, bytesRead)
                 totalBytesRead += bytesRead
                 if (contentLength > 0) {
-                    val percent = ((totalBytesRead * 100) / contentLength).toInt()
+                    val percent = ((totalBytesRead * 100) / contentLength).toInt().coerceIn(0, 100)
                     onProgress(percent)
                 }
             }
@@ -64,7 +71,10 @@ class AudioTagger(
      */
     suspend fun downloadCoverImage(imageUrl: String): ByteArray? = withContext(Dispatchers.IO) {
         try {
-            val request = Request.Builder().url(imageUrl).build()
+            val request = Request.Builder()
+                .url(imageUrl)
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .build()
             val response = okHttpClient.newCall(request).execute()
             response.body?.bytes()
         } catch (e: Exception) {
@@ -74,13 +84,14 @@ class AudioTagger(
     }
 
     /**
-     * Embeds ID3 tags and HD Album Art into an MP3 file.
+     * Embeds ID3 tags, lyrics, and HD Album Art into an MP3 file.
      */
     suspend fun embedMp3Tags(
         sourceFile: File,
         destinationFile: File,
         track: Track,
-        coverBytes: ByteArray?
+        coverBytes: ByteArray?,
+        lyrics: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             val mp3file = Mp3File(sourceFile)
@@ -96,6 +107,11 @@ class AudioTagger(
             id3v2Tag.artist = track.artist
             id3v2Tag.album = track.album
 
+            if (!lyrics.isNullOrBlank()) {
+                id3v2Tag.lyrics = lyrics
+                id3v2Tag.comment = lyrics
+            }
+
             if (coverBytes != null && coverBytes.isNotEmpty()) {
                 id3v2Tag.setAlbumImage(coverBytes, "image/jpeg")
             }
@@ -104,7 +120,6 @@ class AudioTagger(
             true
         } catch (e: Exception) {
             e.printStackTrace()
-            // If tag embedding failed, simply copy original file as fallback
             try {
                 sourceFile.copyTo(destinationFile, overwrite = true)
                 true
@@ -115,19 +130,19 @@ class AudioTagger(
     }
 
     /**
-     * Prepares track file by applying formatting, metadata and tags.
+     * Prepares track file by applying formatting, metadata, lyrics and tags.
      */
     suspend fun processAndTagAudio(
         tempAudioFile: File,
         finalFile: File,
         track: Track,
         format: AudioFormat,
-        coverBytes: ByteArray?
+        coverBytes: ByteArray?,
+        lyrics: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         if (format == AudioFormat.MP3) {
-            embedMp3Tags(tempAudioFile, finalFile, track, coverBytes)
+            embedMp3Tags(tempAudioFile, finalFile, track, coverBytes, lyrics)
         } else {
-            // For M4A/AAC: copy stream directly and ensure target is created
             try {
                 tempAudioFile.copyTo(finalFile, overwrite = true)
                 true

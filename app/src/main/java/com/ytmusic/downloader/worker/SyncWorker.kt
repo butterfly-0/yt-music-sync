@@ -70,7 +70,11 @@ class SyncWorker(
                     ForegroundInfo(NotificationHelper.NOTIFICATION_SYNC_ID, notification)
                 }
 
-                setForeground(foregroundInfo)
+                try {
+                    setForeground(foregroundInfo)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
 
                 _syncStateFlow.value = SyncState.Downloading(
                     currentTrackTitle = track.title,

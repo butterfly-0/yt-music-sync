@@ -2,6 +2,7 @@ package com.ytmusic.downloader.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.QueueMusic
@@ -38,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ytmusic.downloader.data.model.Playlist
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.GlassBorder
 import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
 import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
@@ -48,6 +49,7 @@ import com.ytmusic.downloader.ui.theme.TextTertiary
 @Composable
 fun PlaylistCard(
     playlist: Playlist,
+    onClick: () -> Unit,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleSyncOnlyNew: (Boolean) -> Unit,
     onDelete: () -> Unit,
@@ -59,6 +61,7 @@ fun PlaylistCard(
             .clip(RoundedCornerShape(20.dp))
             .background(GlassCard)
             .border(1.dp, GlassBorderSubtle, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
             .padding(14.dp)
     ) {
         Column(
@@ -134,16 +137,22 @@ fun PlaylistCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
-                    Text(
-                        text = if (playlist.trackCount > 0) "${playlist.trackCount} треків" else "Готовий до перевірки",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = if (playlist.trackCount > 0) "${playlist.trackCount} треків • Натисніть для перегляду" else "Натисніть для перегляду треків",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    )
+                    }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Apple Style Switch
                 Switch(
@@ -173,6 +182,13 @@ fun PlaylistCard(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Відкрити",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
