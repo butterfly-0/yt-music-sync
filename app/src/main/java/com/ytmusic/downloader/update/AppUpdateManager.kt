@@ -2,6 +2,7 @@ package com.ytmusic.downloader.update
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -18,15 +19,16 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 
-sealed interface UpdateState {
-    data object Idle : UpdateState
-    data object Checking : UpdateState
-    data class Available(val info: UpdateInfo) : UpdateState
-    data class Downloading(val progressPercent: Int) : UpdateState
-    data class ReadyToInstall(val apkFile: File) : UpdateState
-    data object UpToDate : UpdateState
-    data class Error(val message: String) : UpdateState
+sealed class UpdateState {
+    data object Idle : UpdateState()
+    data object Checking : UpdateState()
+    data class Available(val info: UpdateInfo) : UpdateState()
+    data class Downloading(val progressPercent: Int) : UpdateState()
+    data class ReadyToInstall(val apkFile: File) : UpdateState()
+    data object UpToDate : UpdateState()
+    data class Error(val message: String) : UpdateState()
 }
 
 data class UpdateInfo(
@@ -36,22 +38,24 @@ data class UpdateInfo(
     val publishedAt: String
 )
 
-class AppUpdateManager(
-    private val context: Context,
-    private val repoOwner: String = "butterfly-0",
-    private val repoName: String = "yt-music-sync"
-) {
-    private val okHttpClient = OkHttpClient()
+class AppUpdateManager(private val context: Context) {
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
 
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
+    private val githubOwner = "butterfly-0"
+    private val githubRepo = "yt-music-sync"
+
     suspend fun checkForUpdates(): UpdateInfo? = withContext(Dispatchers.IO) {
         _updateState.value = UpdateState.Checking
-        val apiUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
-
+        val url = "https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest"
         val request = Request.Builder()
-            .url(apiUrl)
+            .url(url)
             .addHeader("Accept", "application/vnd.github.v3+json")
             .addHeader("User-Agent", "YTMusicSync-App")
             .build()
@@ -59,26 +63,22 @@ class AppUpdateManager(
         try {
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                _updateState.value = UpdateState.UpToDate
+                _updateState.value = UpdateState.Error("Не вдалося перевірити оновлення (${response.code})")
                 return@withContext null
             }
 
-            val body = response.body?.string() ?: return@withContext null
-            val json = JsonParser.parseString(body).asJsonObject
+            val bodyString = response.body?.string() ?: return@withContext null
+            val json = JsonParser.parseString(bodyString).asJsonObject
 
-            val tagName = json.get("tag_name")?.asString ?: ""
-            val releaseNotes = json.get("body")?.asString ?: "Оновлення додатку"
+            val tagName = json.get("tag_name")?.asString?.removePrefix("v") ?: ""
+            val releaseNotes = json.get("body")?.asString ?: "Покращення стабільності та виправлення помилок."
             val publishedAt = json.get("published_at")?.asString ?: ""
 
-            val latestVersion = tagName.removePrefix("v").trim()
-            val currentVersion = BuildConfig.VERSION_NAME
-
-            // Find .apk asset
-            val assets = json.getAsJsonArray("assets") ?: com.google.gson.JsonArray()
+            val assets = json.getAsJsonArray("assets") ?: return@withContext null
             var apkDownloadUrl: String? = null
 
             for (i in 0 until assets.size()) {
-                val asset = assets.get(i).asJsonObject
+                val asset = assets[i].asJsonObject
                 val name = asset.get("name")?.asString ?: ""
                 if (name.endsWith(".apk", ignoreCase = true)) {
                     apkDownloadUrl = asset.get("browser_download_url")?.asString
@@ -86,7 +86,15 @@ class AppUpdateManager(
                 }
             }
 
-            if (isNewerVersion(latestVersion, currentVersion) && !apkDownloadUrl.isNullOrBlank()) {
+            if (apkDownloadUrl == null) {
+                _updateState.value = UpdateState.Error("APK-файл не знайдено в релізі")
+                return@withContext null
+            }
+
+            val currentVersion = BuildConfig.VERSION_NAME
+            val latestVersion = tagName.ifBlank { currentVersion }
+
+            if (isNewerVersion(latestVersion, currentVersion)) {
                 val updateInfo = UpdateInfo(
                     versionName = latestVersion,
                     releaseNotes = releaseNotes,
@@ -150,6 +158,11 @@ class AppUpdateManager(
     }
 
     fun triggerInstall(apkFile: File) {
+        if (!apkFile.exists() || apkFile.length() == 0L) {
+            _updateState.value = UpdateState.Error("Файл оновлення не знайдено або він пошкоджений")
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!context.packageManager.canRequestPackageInstalls()) {
                 val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -161,17 +174,35 @@ class AppUpdateManager(
             }
         }
 
-        val apkUri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            apkFile
-        )
+        try {
+            val apkUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apkFile
+            )
 
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+
+            val resInfoList = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            for (resolveInfo in resInfoList) {
+                context.grantUriPermission(
+                    resolveInfo.activityInfo.packageName,
+                    apkUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _updateState.value = UpdateState.Error("Помилка запуску встановлення: ${e.localizedMessage}")
         }
-        context.startActivity(intent)
     }
 
     private fun isNewerVersion(remote: String, local: String): Boolean {
