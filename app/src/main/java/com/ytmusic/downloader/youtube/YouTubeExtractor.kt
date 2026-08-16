@@ -10,17 +10,16 @@ import com.ytmusic.downloader.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
-import java.net.URLDecoder
 
 class YouTubeExtractor(private val client: YouTubeClient) {
 
     /**
-     * Fetches all playlists from user's YouTube / YouTube Music library.
+     * Fetches all playlists from user's YouTube Music library.
      */
     suspend fun getUserPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
         val playlists = mutableListOf<Playlist>()
 
-        // 1. Add Default System Playlists
+        // 1. Add Default Pinned "Liked Music" Playlist
         playlists.add(
             Playlist(
                 id = "LM",
@@ -34,26 +33,14 @@ class YouTubeExtractor(private val client: YouTubeClient) {
                 thumbnailUrl = null
             )
         )
-        playlists.add(
-            Playlist(
-                id = "LL",
-                title = "Вподобані відео (YouTube)",
-                url = "https://www.youtube.com/playlist?list=LL",
-                isLikedMusic = true,
-                isEnabled = true,
-                syncOnlyNew = true,
-                trackCount = 0,
-                lastSyncedAt = 0,
-                thumbnailUrl = null
-            )
-        )
 
-        // 2. Fetch User Custom / Library Playlists
+        // 2. Query YouTube Music Library Endpoints
         val candidateEndpoints = listOf(
             "FEmusic_liked_playlists",
             "FEmusic_library_playlists",
+            "FEmusic_library_landing",
             "FEplaylist_aggregated",
-            "FEmusic_library_landing"
+            "FElibrary"
         )
 
         for (browseId in candidateEndpoints) {
@@ -68,10 +55,18 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             }
         }
 
-        // Also check YouTube Web Guide / Library
+        // 3. Fallback: Query YouTube Web Guide & Library Endpoints
         val webGuide = client.postWebInnertube("guide", JsonObject().apply { add("context", getWebContext()) })
         if (webGuide != null) {
             extractPlaylistsRecursively(webGuide, playlists)
+        }
+
+        val webLibrary = client.postWebInnertube("browse", JsonObject().apply {
+            add("context", getWebContext())
+            addProperty("browseId", "FEplaylist_aggregated")
+        })
+        if (webLibrary != null) {
+            extractPlaylistsRecursively(webLibrary, playlists)
         }
 
         playlists.distinctBy { it.id }
@@ -87,7 +82,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         val tracks = mutableListOf<Track>()
 
         val candidateBrowseIds = when (playlistId) {
-            "LM", "FEmusic_liked_videos" -> listOf("FEmusic_liked_videos", "LM", "VLLM", "VLLL", "LL")
+            "LM", "FEmusic_liked_videos" -> listOf("FEmusic_liked_videos", "LM", "VLLM", "VLLL")
             "LL", "VLLL" -> listOf("VLLL", "LL", "FEmusic_liked_videos", "LM")
             else -> {
                 val cleanId = playlistId.removePrefix("VL")
@@ -131,7 +126,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     }
 
     /**
-     * Extracts direct audio stream URL with multi-client fallbacks (iOS, Android VR, Web).
+     * Extracts direct audio stream URL with multi-client fallbacks (iOS, Android VR, Web, Piped).
      */
     suspend fun getAudioStreamUrl(videoId: String, preferredFormat: AudioFormat = AudioFormat.M4A): AudioStreamInfo? = withContext(Dispatchers.IO) {
         // 1. Try iOS Client (direct unthrottled audio streams without cipher)
@@ -291,28 +286,75 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         if (element.isJsonObject) {
             val obj = element.asJsonObject
 
-            // Check for playlist renderers
+            // 1. YouTube Music Standard Two-Row Item (Primary Playlist Format)
+            if (obj.has("musicTwoRowItemRenderer")) {
+                val renderer = obj.getAsJsonObject("musicTwoRowItemRenderer")
+                parseMusicTwoRowItemPlaylist(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
+                return
+            }
+
+            // 2. YouTube Music List Item Renderer (with playlist link)
+            if (obj.has("musicResponsiveListItemRenderer")) {
+                val renderer = obj.getAsJsonObject("musicResponsiveListItemRenderer")
+                parseMusicResponsiveListItemPlaylist(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
+            }
+
+            // 3. YouTube Grid & General Playlist Renderers
             if (obj.has("gridPlaylistRenderer")) {
                 val renderer = obj.getAsJsonObject("gridPlaylistRenderer")
-                parseGridPlaylist(renderer)?.let { playlists.add(it) }
+                parseGridPlaylist(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
                 return
             }
 
             if (obj.has("playlistRenderer")) {
                 val renderer = obj.getAsJsonObject("playlistRenderer")
-                parseGeneralPlaylist(renderer)?.let { playlists.add(it) }
+                parseGeneralPlaylist(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
                 return
             }
 
             if (obj.has("compactPlaylistRenderer")) {
                 val renderer = obj.getAsJsonObject("compactPlaylistRenderer")
-                parseCompactPlaylist(renderer)?.let { playlists.add(it) }
+                parseCompactPlaylist(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
                 return
             }
 
             if (obj.has("guideEntryRenderer")) {
                 val renderer = obj.getAsJsonObject("guideEntryRenderer")
-                parseGuideEntry(renderer)?.let { playlists.add(it) }
+                parseGuideEntry(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
+                return
+            }
+
+            if (obj.has("lockupViewModel")) {
+                val renderer = obj.getAsJsonObject("lockupViewModel")
+                parseLockupViewModel(renderer)?.let {
+                    if (playlists.none { p -> p.id == it.id }) {
+                        playlists.add(it)
+                    }
+                }
                 return
             }
 
@@ -324,6 +366,112 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             for (i in 0 until array.size()) {
                 extractPlaylistsRecursively(array.get(i), playlists)
             }
+        }
+    }
+
+    private fun parseMusicTwoRowItemPlaylist(item: JsonObject): Playlist? {
+        try {
+            val navEndpoint = item.getAsJsonObject("navigationEndpoint")
+                ?: item.getAsJsonObject("onTap")?.getAsJsonObject("innertubeCommand")
+                ?: return null
+
+            val browseEndpoint = navEndpoint.getAsJsonObject("browseEndpoint")
+            var playlistId = browseEndpoint?.get("browseId")?.asString
+                ?: navEndpoint.getAsJsonObject("watchPlaylistEndpoint")?.get("playlistId")?.asString
+                ?: navEndpoint.getAsJsonObject("watchEndpoint")?.get("playlistId")?.asString
+                ?: return null
+
+            if (playlistId == "LM" || playlistId == "LL" || playlistId.startsWith("FEmusic_liked_videos")) {
+                return null
+            }
+
+            // Clean VL prefix
+            if (playlistId.startsWith("VL")) {
+                playlistId = playlistId.removePrefix("VL")
+            }
+
+            val title = item.getAsJsonObject("title")?.getAsJsonArray("runs")?.get(0)?.asJsonObject?.get("text")?.asString
+                ?: item.getAsJsonObject("title")?.get("simpleText")?.asString
+                ?: "Плейлист"
+
+            val thumbnails = item.getAsJsonObject("thumbnailRenderer")
+                ?.getAsJsonObject("musicThumbnailRenderer")
+                ?.getAsJsonObject("thumbnail")
+                ?.getAsJsonArray("thumbnails")
+                ?: item.getAsJsonObject("thumbnail")?.getAsJsonArray("thumbnails")
+
+            val thumbUrl = thumbnails?.lastOrNull()?.asJsonObject?.get("url")?.asString
+
+            var trackCount = 0
+            val subtitleRuns = item.getAsJsonObject("subtitle")?.getAsJsonArray("runs")
+            if (subtitleRuns != null) {
+                for (i in 0 until subtitleRuns.size()) {
+                    val text = subtitleRuns[i].asJsonObject.get("text")?.asString ?: ""
+                    val digits = text.filter { it.isDigit() }.toIntOrNull()
+                    if (digits != null && digits > 0) {
+                        trackCount = digits
+                        break
+                    }
+                }
+            }
+
+            return Playlist(
+                id = playlistId,
+                title = title,
+                url = "https://music.youtube.com/playlist?list=$playlistId",
+                isLikedMusic = false,
+                isEnabled = true,
+                syncOnlyNew = false,
+                trackCount = trackCount,
+                lastSyncedAt = 0L,
+                thumbnailUrl = thumbUrl
+            )
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    private fun parseMusicResponsiveListItemPlaylist(item: JsonObject): Playlist? {
+        try {
+            val flexColumns = item.getAsJsonArray("flexColumns") ?: return null
+            if (flexColumns.size() == 0) return null
+
+            val col1 = flexColumns.get(0).asJsonObject
+                .getAsJsonObject("musicResponsiveListItemFlexColumnRenderer")
+                ?.getAsJsonObject("text")
+                ?.getAsJsonArray("runs")
+                ?.get(0)?.asJsonObject
+
+            val navEndpoint = col1?.getAsJsonObject("navigationEndpoint") ?: return null
+            val browseEndpoint = navEndpoint.getAsJsonObject("browseEndpoint") ?: return null
+            val browseId = browseEndpoint.get("browseId")?.asString ?: return null
+
+            if (!browseId.startsWith("VLPL") && !browseId.startsWith("PL") && !browseId.startsWith("VLRD")) {
+                return null
+            }
+
+            val playlistId = browseId.removePrefix("VL")
+            val title = col1.get("text")?.asString ?: "Плейлист"
+
+            val thumbnails = item.getAsJsonObject("thumbnail")
+                ?.getAsJsonObject("musicThumbnailRenderer")
+                ?.getAsJsonObject("thumbnail")
+                ?.getAsJsonArray("thumbnails")
+            val thumbUrl = thumbnails?.lastOrNull()?.asJsonObject?.get("url")?.asString
+
+            return Playlist(
+                id = playlistId,
+                title = title,
+                url = "https://music.youtube.com/playlist?list=$playlistId",
+                isLikedMusic = false,
+                isEnabled = true,
+                syncOnlyNew = false,
+                trackCount = 0,
+                lastSyncedAt = 0L,
+                thumbnailUrl = thumbUrl
+            )
+        } catch (e: Exception) {
+            return null
         }
     }
 
@@ -427,6 +575,29 @@ class YouTubeExtractor(private val client: YouTubeClient) {
                 id = playlistId,
                 title = title,
                 url = "https://music.youtube.com/playlist?list=$playlistId",
+                isLikedMusic = false,
+                isEnabled = true,
+                syncOnlyNew = false,
+                trackCount = 0,
+                lastSyncedAt = 0L,
+                thumbnailUrl = null
+            )
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    private fun parseLockupViewModel(item: JsonObject): Playlist? {
+        try {
+            val contentId = item.get("contentId")?.asString ?: return null
+            val metadata = item.getAsJsonObject("metadata") ?: return null
+            val title = metadata.getAsJsonObject("lockupMetadataViewModel")
+                ?.getAsJsonObject("title")?.get("content")?.asString ?: "Плейлист"
+
+            return Playlist(
+                id = contentId,
+                title = title,
+                url = "https://music.youtube.com/playlist?list=$contentId",
                 isLikedMusic = false,
                 isEnabled = true,
                 syncOnlyNew = false,

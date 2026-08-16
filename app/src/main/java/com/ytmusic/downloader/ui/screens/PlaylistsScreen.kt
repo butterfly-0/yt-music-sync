@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -100,26 +101,47 @@ fun PlaylistsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            // iOS Large Header
-            Column(
-                modifier = Modifier.padding(top = 18.dp, bottom = 14.dp)
+            // iOS Large Header with Sync button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Плейлисти",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        fontSize = 32.sp,
-                        letterSpacing = (-0.8).sp
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Плейлисти",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            fontSize = 32.sp,
+                            letterSpacing = (-0.8).sp
+                        )
                     )
-                )
-                Text(
-                    text = "Синхронізація вподобаного та користувацьких списків",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = TextSecondary,
-                        fontSize = 13.sp
+                    Text(
+                        text = "Синхронізація вподобаного та ваших плейлистів",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextSecondary,
+                            fontSize = 13.sp
+                        )
                     )
-                )
+                }
+
+                IconButton(
+                    onClick = { viewModel.syncPlaylists() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = "Оновити плейлисти",
+                        tint = AccentRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             // Glass Info Banner

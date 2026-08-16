@@ -31,6 +31,7 @@ class YouTubeRepository(
      * Automatically syncs and updates user's library playlists from their YouTube account.
      */
     suspend fun syncUserPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
+        playlistDao.deletePlaylistById("LL")
         val fetchedPlaylists = extractor.getUserPlaylists()
         for (playlist in fetchedPlaylists) {
             val existing = playlistDao.getPlaylistById(playlist.id)
