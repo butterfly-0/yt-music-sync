@@ -12,8 +12,8 @@ android {
         applicationId = "com.ytmusic.downloader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -117,6 +117,9 @@ dependencies {
 
     // Storage Access Framework DocumentFile
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // NewPipeExtractor for universal YouTube Music stream extraction & cipher resolution
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.4")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -12,10 +12,21 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.stream.StreamInfo
 
 class YouTubeExtractor(private val client: YouTubeClient) {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+
+    init {
+        try {
+            NewPipe.init(NewPipeDownloader(client.getHttpClient()))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     /**
      * Fetches only real music playlists created or saved by the user.
@@ -121,10 +132,46 @@ class YouTubeExtractor(private val client: YouTubeClient) {
     }
 
     /**
-     * Extracts direct audio stream URL with multi-client fallbacks (Android VR, Android, Cobalt, Piped).
+     * Extracts direct audio stream URL with multi-client fallbacks (NewPipeExtractor, WEB_REMIX Authenticated, Android VR, Android).
      */
     suspend fun getAudioStreamUrl(videoId: String, preferredFormat: AudioFormat = AudioFormat.M4A): AudioStreamInfo? = withContext(Dispatchers.IO) {
-        // 1. Try Android VR Context (Verified direct googlevideo unthrottled streams)
+        // 1. Try NewPipeExtractor (De-facto open-source standard for solving cipher and extracting pure streams)
+        try {
+            val streamInfo = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$videoId")
+            val audioStreams = streamInfo.audioStreams
+            if (!audioStreams.isNullOrEmpty()) {
+                val bestAudio = audioStreams.maxByOrNull { it.averageBitrate } ?: audioStreams.first()
+                val url = bestAudio.content
+                if (!url.isNullOrBlank()) {
+                    return@withContext AudioStreamInfo(
+                        url = url,
+                        mimeType = bestAudio.format?.mimeType ?: "audio/mp4",
+                        bitrate = if (bestAudio.averageBitrate > 0) bestAudio.averageBitrate * 1000 else 128000,
+                        durationMs = streamInfo.duration * 1000L
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Try YouTube Music Authenticated WEB_REMIX Player (Uses user's logged-in session)
+        try {
+            val musicRequestBody = JsonObject().apply {
+                add("context", getMusicContext())
+                addProperty("videoId", videoId)
+                addProperty("cpn", generateCpn())
+                addProperty("contentCheckOk", true)
+                addProperty("racyCheckOk", true)
+            }
+            val response = client.postInnertube("player", musicRequestBody)
+            val stream = extractStreamFromPlayerResponse(response, preferredFormat)
+            if (stream != null) return@withContext stream
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 3. Try Android VR Context
         try {
             val vrRequestBody = JsonObject().apply {
                 add("context", getAndroidVrContext())
@@ -140,7 +187,7 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             e.printStackTrace()
         }
 
-        // 2. Try Standard Android Context
+        // 4. Try Standard Android Context
         try {
             val androidRequestBody = JsonObject().apply {
                 add("context", getAndroidContext())
@@ -154,80 +201,6 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             if (androidStream != null) return@withContext androidStream
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-
-        // 4. Try Cobalt API
-        val cobaltInstances = listOf(
-            "https://api.cobalt.tools",
-            "https://cobalt.api.timelessoses.moe",
-            "https://co.wuk.sh/api/json"
-        )
-        for (cobaltUrl in cobaltInstances) {
-            try {
-                val jsonPayload = JsonObject().apply {
-                    addProperty("url", "https://www.youtube.com/watch?v=$videoId")
-                    addProperty("downloadMode", "audio")
-                    addProperty("audioFormat", "best")
-                }
-                val req = Request.Builder()
-                    .url(if (cobaltUrl.endsWith("/api/json")) cobaltUrl else "$cobaltUrl/")
-                    .post(jsonPayload.toString().toRequestBody(jsonMediaType))
-                    .addHeader("Accept", "application/json")
-                    .addHeader("Content-Type", "application/json")
-                    .build()
-
-                val resp = client.getHttpClient().newCall(req).execute()
-                val body = resp.body?.string()
-                if (!body.isNullOrBlank()) {
-                    val json = JsonParser.parseString(body).asJsonObject
-                    val streamUrl = json.get("url")?.asString
-                    if (!streamUrl.isNullOrBlank()) {
-                        return@withContext AudioStreamInfo(
-                            url = streamUrl,
-                            mimeType = "audio/mp4",
-                            bitrate = 256000,
-                            durationMs = 0L
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                // Continue
-            }
-        }
-
-        // 5. Try Piped API Instances Fallback
-        val pipedInstances = listOf(
-            "https://pipedapi.kavin.rocks",
-            "https://api.piped.private.coffee",
-            "https://pipedapi.tokhmi.xyz"
-        )
-        for (instance in pipedInstances) {
-            try {
-                val pipedUrl = "$instance/streams/$videoId"
-                val req = Request.Builder().url(pipedUrl).build()
-                val resp = client.getHttpClient().newCall(req).execute()
-                val body = resp.body?.string()
-                if (!body.isNullOrBlank()) {
-                    val json = JsonParser.parseString(body).asJsonObject
-                    val audioStreams = json.getAsJsonArray("audioStreams") ?: JsonArray()
-                    for (i in 0 until audioStreams.size()) {
-                        val stream = audioStreams[i].asJsonObject
-                        val url = stream.get("url")?.asString
-                        val mimeType = stream.get("mimeType")?.asString ?: "audio/mp4"
-                        val bitrate = stream.get("bitrate")?.asInt ?: 128000
-                        if (url != null) {
-                            return@withContext AudioStreamInfo(
-                                url = url,
-                                mimeType = mimeType,
-                                bitrate = bitrate,
-                                durationMs = json.get("duration")?.asLong?.times(1000) ?: 0L
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Continue
-            }
         }
 
         null
