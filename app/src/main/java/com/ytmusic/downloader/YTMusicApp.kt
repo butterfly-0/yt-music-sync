@@ -1,5 +1,6 @@
 package com.ytmusic.downloader
 
+import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache

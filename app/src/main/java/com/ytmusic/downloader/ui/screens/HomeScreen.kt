@@ -21,15 +21,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MusicOff
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -54,7 +52,6 @@ import com.ytmusic.downloader.ui.theme.SpotifyCard
 import com.ytmusic.downloader.ui.theme.SpotifyCardHover
 import com.ytmusic.downloader.ui.theme.SpotifyDark
 import com.ytmusic.downloader.ui.theme.SpotifyGreen
-import com.ytmusic.downloader.ui.theme.SpotifyLikedGradient
 import com.ytmusic.downloader.ui.theme.SpotifySurface
 import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
 import com.ytmusic.downloader.ui.viewmodel.MainViewModel
@@ -281,7 +278,7 @@ fun SpotifySyncBanner(
     onSyncClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isSyncing = syncState is SyncState.Syncing
+    val isSyncing = syncState is SyncState.Checking || syncState is SyncState.Downloading
 
     Row(
         modifier = modifier
@@ -311,12 +308,12 @@ fun SpotifySyncBanner(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (isSyncing) {
-                    val progress = (syncState as SyncState.Syncing).progress
-                    val title = (syncState as SyncState.Syncing).currentTrackTitle
-                    if (title != null) "Завантаження ($progress%): $title" else "Синхронізація… $progress%"
-                } else {
-                    "Завантажено на пристрій: $totalCount пісень"
+                text = when (syncState) {
+                    is SyncState.Checking -> "Перевірка нових пісень…"
+                    is SyncState.Downloading -> "Завантаження (${syncState.progressPercent}%): ${syncState.currentTrackTitle}"
+                    is SyncState.Completed -> "Синхронізовано! Всього: $totalCount"
+                    is SyncState.Error -> "Помилка: ${syncState.errorMessage}"
+                    is SyncState.Idle -> "Завантажено на пристрій: $totalCount пісень"
                 },
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = if (isSyncing) SpotifyGreen else SpotifyTextSecondary,
@@ -350,6 +347,94 @@ fun SpotifySyncBanner(
                     modifier = Modifier.size(22.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SpotifyTrackRow(
+    track: Track,
+    isPlaying: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(SpotifySurface),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!track.thumbnailUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = track.thumbnailUrl,
+                    contentDescription = track.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = SpotifyTextSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) SpotifyGreen else Color.White,
+                    fontSize = 14.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.DownloadDone,
+                    contentDescription = null,
+                    tint = SpotifyGreen,
+                    modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = track.artist,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = SpotifyTextSecondary,
+                        fontSize = 12.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Опції",
+                tint = SpotifyTextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

@@ -39,6 +39,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,10 +58,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ytmusic.downloader.data.model.Track
-import com.ytmusic.downloader.ui.theme.SpotifyCardHover
 import com.ytmusic.downloader.ui.theme.SpotifyGreen
 import com.ytmusic.downloader.ui.theme.SpotifySurface
 import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -84,6 +85,14 @@ fun SpotifyMiniPlayer(
 
         var isLiked by remember { mutableStateOf(true) }
         var isHeartPressed by remember { mutableStateOf(false) }
+
+        LaunchedEffect(isHeartPressed) {
+            if (isHeartPressed) {
+                delay(180)
+                isHeartPressed = false
+            }
+        }
+
         val heartScale by animateFloatAsState(
             targetValue = if (isHeartPressed) 1.35f else 1.0f,
             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -189,12 +198,6 @@ fun SpotifyMiniPlayer(
                             .size(36.dp)
                             .scale(heartScale)
                     ) {
-                        LaunchedEffect(isHeartPressed) {
-                            if (isHeartPressed) {
-                                kotlinx.coroutines.delay(180)
-                                isHeartPressed = false
-                            }
-                        }
                         Icon(
                             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Улюблене",

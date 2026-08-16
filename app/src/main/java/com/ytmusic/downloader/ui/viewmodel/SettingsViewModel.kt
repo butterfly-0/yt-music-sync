@@ -83,7 +83,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setCustomDownloadFolder(uri: Uri, displayName: String) {
         try {
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            app.contentResolver.takePersistableUriPermission(uri, flags)
+            getApplication<Application>().contentResolver.takePersistableUriPermission(uri, flags)
         } catch (e: Exception) {
             e.printStackTrace()
         }
