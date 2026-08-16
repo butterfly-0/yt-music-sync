@@ -58,19 +58,19 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun togglePlaylistEnabled(playlist: Playlist, isEnabled: Boolean) {
         viewModelScope.launch {
-            youtubeRepository.updatePlaylistEnabled(playlist.id, isEnabled)
+            youtubeRepository.updatePlaylistEnabled(playlist, isEnabled)
         }
     }
 
     fun toggleSyncOnlyNew(playlist: Playlist, syncOnlyNew: Boolean) {
         viewModelScope.launch {
-            youtubeRepository.updatePlaylistSyncOnlyNew(playlist.id, syncOnlyNew)
+            youtubeRepository.updatePlaylistSyncOnlyNew(playlist, syncOnlyNew)
         }
     }
 
     fun deletePlaylist(playlist: Playlist) {
         viewModelScope.launch {
-            youtubeRepository.deletePlaylist(playlist.id)
+            youtubeRepository.deletePlaylist(playlist)
         }
     }
 }
