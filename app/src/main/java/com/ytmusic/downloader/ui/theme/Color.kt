@@ -44,3 +44,25 @@ val TextTertiary = Color(0xFF636366)
 
 val BadgeBackground = Color(0x40FFFFFF)
 val BorderSubtle = Color(0x1AFFFFFF)
+
+// Spotify Design System Tokens (1:1 UI)
+val SpotifyGreen = Color(0xFF1DB954)
+val SpotifyGreenBright = Color(0xFF1ED760)
+val SpotifyDark = Color(0xFF121212)
+val SpotifyBlack = Color(0xFF000000)
+val SpotifyCard = Color(0xFF181818)
+val SpotifyCardHover = Color(0xFF282828)
+val SpotifySurface = Color(0xFF242424)
+val SpotifyTextSecondary = Color(0xFFB3B3B3)
+val SpotifyTextMuted = Color(0xFF727272)
+val SpotifyLikedStart = Color(0xFF450AF5)
+val SpotifyLikedEnd = Color(0xFF8E8EE5)
+val SpotifyLyricsCardBg = Color(0xFF2E77D0)
+
+val SpotifyLikedGradient = Brush.linearGradient(
+    listOf(SpotifyLikedStart, SpotifyLikedEnd)
+)
+val SpotifyGreenGradient = Brush.horizontalGradient(
+    listOf(SpotifyGreen, SpotifyGreenBright)
+)
+

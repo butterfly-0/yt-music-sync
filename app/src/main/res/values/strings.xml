@@ -6,6 +6,7 @@
     <!-- Navigation -->
     <string name="nav_home">Головна</string>
     <string name="nav_playlists">Плейлисти</string>
+    <string name="nav_player">Музика</string>
     <string name="nav_settings">Налаштування</string>
     
     <!-- Home Screen -->

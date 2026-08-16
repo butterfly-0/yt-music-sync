@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.Settings
@@ -61,6 +63,13 @@ sealed class Screen(
         unselectedIcon = Icons.Outlined.QueueMusic
     )
 
+    data object Player : Screen(
+        route = "player",
+        titleRes = R.string.nav_player,
+        selectedIcon = Icons.Filled.Headphones,
+        unselectedIcon = Icons.Outlined.Headphones
+    )
+
     data object Settings : Screen(
         route = "settings",
         titleRes = R.string.nav_settings,
@@ -84,6 +93,7 @@ fun BottomNavBar(
     val items = listOf(
         Screen.Home,
         Screen.Playlists,
+        Screen.Player,
         Screen.Settings
     )
 

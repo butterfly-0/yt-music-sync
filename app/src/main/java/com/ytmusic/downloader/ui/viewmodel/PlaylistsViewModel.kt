@@ -48,8 +48,19 @@ class PlaylistsViewModel(application: Application) : AndroidViewModel(applicatio
     private val _downloadedTrackIds = MutableStateFlow<Set<String>>(emptySet())
     val downloadedTrackIds: StateFlow<Set<String>> = _downloadedTrackIds.asStateFlow()
 
-    val currentPlayingTrackId: StateFlow<String?> = previewPlayer.currentPlayingTrackId
-    val isPlaying: StateFlow<Boolean> = previewPlayer.isPlaying
+    val currentPlayingTrackId: StateFlow<String?> = app.musicPlayerManager.currentTrack
+        .map { it?.id }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val isPlaying: StateFlow<Boolean> = app.musicPlayerManager.isPlaying
+
+    fun togglePlayPreview(track: Track) {
+        if (app.musicPlayerManager.currentTrack.value?.id == track.id) {
+            app.musicPlayerManager.playOrPause()
+        } else {
+            app.musicPlayerManager.playTrack(track, _playlistTracks.value)
+        }
+    }
 
     init {
         syncPlaylists()

@@ -44,8 +44,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val totalTrackCount: StateFlow<Int> = trackDao.getTrackCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val currentPlayingTrackId: StateFlow<String?> = previewPlayer.currentPlayingTrackId
-    val isPlaying: StateFlow<Boolean> = previewPlayer.isPlaying
+    val currentPlayingTrackId: StateFlow<String?> = app.musicPlayerManager.currentTrack
+        .map { it?.id }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val isPlaying: StateFlow<Boolean> = app.musicPlayerManager.isPlaying
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
@@ -56,23 +59,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun togglePlayPreview(track: Track) {
-        val path = track.localFilePath
-        if (!path.isNullOrBlank()) {
-            previewPlayer.playOrPause(track.id, path)
+        if (app.musicPlayerManager.currentTrack.value?.id == track.id) {
+            app.musicPlayerManager.playOrPause()
+        } else {
+            app.musicPlayerManager.playTrack(track, tracks.value)
         }
     }
 
     fun deleteTrack(track: Track) {
         viewModelScope.launch {
-            if (currentPlayingTrackId.value == track.id) {
-                previewPlayer.stop()
-            }
             downloadRepo.deleteTrack(track)
+            if (app.musicPlayerManager.currentTrack.value?.id == track.id) {
+                app.musicPlayerManager.next()
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        previewPlayer.stop()
     }
 }

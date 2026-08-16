@@ -48,6 +48,9 @@ class YTMusicApp : Application() {
     lateinit var audioPreviewPlayer: AudioPreviewPlayer
         private set
 
+    lateinit var musicPlayerManager: com.ytmusic.downloader.player.MusicPlayerManager
+        private set
+
     lateinit var appUpdateManager: com.ytmusic.downloader.update.AppUpdateManager
         private set
 
@@ -65,6 +68,7 @@ class YTMusicApp : Application() {
         lyricsHelper = com.ytmusic.downloader.audio.LyricsHelper(youtubeClient.getHttpClient())
         audioTagger = AudioTagger()
         mediaStoreHelper = MediaStoreHelper(this)
+        musicPlayerManager = com.ytmusic.downloader.player.MusicPlayerManager(this, lyricsHelper)
 
         downloadRepository = DownloadRepository(
             context = this,

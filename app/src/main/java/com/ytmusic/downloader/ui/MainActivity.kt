@@ -25,22 +25,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.ytmusic.downloader.ui.components.BottomNavBar
-import com.ytmusic.downloader.ui.components.MiniPlayerBar
 import com.ytmusic.downloader.ui.components.Screen
+import com.ytmusic.downloader.ui.components.SpotifyMiniPlayer
+import com.ytmusic.downloader.ui.components.SpotifyNowPlayingSheet
 import com.ytmusic.downloader.ui.screens.HomeScreen
 import com.ytmusic.downloader.ui.screens.LoginScreen
 import com.ytmusic.downloader.ui.screens.PlaylistsScreen
+import com.ytmusic.downloader.ui.screens.PlayerScreen
 import com.ytmusic.downloader.ui.screens.SettingsScreen
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.YTMusicDownloaderTheme
 import com.ytmusic.downloader.ui.viewmodel.MainViewModel
 import com.ytmusic.downloader.ui.viewmodel.PlaylistsViewModel
+import com.ytmusic.downloader.ui.viewmodel.PlayerViewModel
 import com.ytmusic.downloader.ui.viewmodel.SettingsViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
     private val playlistsViewModel: PlaylistsViewModel by viewModels()
+    private val playerViewModel: PlayerViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -58,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 MainAppNavHost(
                     mainViewModel = mainViewModel,
                     playlistsViewModel = playlistsViewModel,
+                    playerViewModel = playerViewModel,
                     settingsViewModel = settingsViewModel
                 )
             }
@@ -90,6 +95,7 @@ class MainActivity : ComponentActivity() {
 fun MainAppNavHost(
     mainViewModel: MainViewModel,
     playlistsViewModel: PlaylistsViewModel,
+    playerViewModel: PlayerViewModel,
     settingsViewModel: SettingsViewModel
 ) {
     val navController = rememberNavController()
@@ -97,76 +103,112 @@ fun MainAppNavHost(
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
     val showBottomBar = currentRoute != Screen.Login.route
-    val currentPlayingId by mainViewModel.currentPlayingTrackId.collectAsState()
-    val isPlaying by mainViewModel.isPlaying.collectAsState()
-    val tracks by mainViewModel.tracks.collectAsState()
-    val playingTrack = tracks.firstOrNull { it.id == currentPlayingId }
+    val currentTrack by playerViewModel.currentTrack.collectAsState()
+    val isPlaying by playerViewModel.isPlaying.collectAsState()
+    val progress by playerViewModel.progress.collectAsState()
+    val currentPositionMs by playerViewModel.currentPositionMs.collectAsState()
+    val durationMs by playerViewModel.durationMs.collectAsState()
+    val isShuffle by playerViewModel.isShuffle.collectAsState()
+    val repeatMode by playerViewModel.repeatMode.collectAsState()
+    val lyrics by playerViewModel.lyrics.collectAsState()
+    val currentLyricIndex by playerViewModel.currentLyricIndex.collectAsState()
+    val isLoadingLyrics by playerViewModel.isLoadingLyrics.collectAsState()
+    val isNowPlayingExpanded by playerViewModel.isNowPlayingExpanded.collectAsState()
 
-    Scaffold(
-        containerColor = DarkBackground,
-        bottomBar = {
-            if (showBottomBar) {
-                Column {
-                    if (playingTrack != null) {
-                        MiniPlayerBar(
-                            currentTrack = playingTrack,
-                            isPlaying = isPlaying,
-                            onTogglePlay = { mainViewModel.togglePlayPreview(playingTrack) },
-                            onClose = { mainViewModel.togglePlayPreview(playingTrack) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = DarkBackground,
+            bottomBar = {
+                if (showBottomBar) {
+                    Column {
+                        if (currentTrack != null) {
+                            SpotifyMiniPlayer(
+                                currentTrack = currentTrack,
+                                isPlaying = isPlaying,
+                                progress = progress,
+                                onPlayPause = { playerViewModel.playOrPause() },
+                                onClick = { playerViewModel.expandNowPlaying() }
+                            )
+                        }
+
+                        BottomNavBar(
+                            currentRoute = currentRoute,
+                            onNavigate = { route ->
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         )
                     }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Home.route) {
+                    HomeScreen(viewModel = mainViewModel)
+                }
 
-                    BottomNavBar(
-                        currentRoute = currentRoute,
-                        onNavigate = { route ->
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                composable(Screen.Playlists.route) {
+                    PlaylistsScreen(viewModel = playlistsViewModel)
+                }
+
+                composable(Screen.Player.route) {
+                    PlayerScreen(viewModel = playerViewModel)
+                }
+
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onNavigateToLogin = {
+                            navController.navigate(Screen.Login.route)
+                        }
+                    )
+                }
+
+                composable(Screen.Login.route) {
+                    LoginScreen(
+                        viewModel = settingsViewModel,
+                        onLoginSuccess = {
+                            mainViewModel.startSync()
+                            navController.popBackStack()
+                        },
+                        onBack = {
+                            navController.popBackStack()
                         }
                     )
                 }
             }
-        },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Home.route) {
-                HomeScreen(viewModel = mainViewModel)
-            }
-
-            composable(Screen.Playlists.route) {
-                PlaylistsScreen(viewModel = playlistsViewModel)
-            }
-
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    viewModel = settingsViewModel,
-                    onNavigateToLogin = {
-                        navController.navigate(Screen.Login.route)
-                    }
-                )
-            }
-
-            composable(Screen.Login.route) {
-                LoginScreen(
-                    viewModel = settingsViewModel,
-                    onLoginSuccess = {
-                        mainViewModel.startSync()
-                        navController.popBackStack()
-                    },
-                    onBack = {
-                        navController.popBackStack()
-                    }
-                )
-            }
         }
+
+        // Full Screen Spotify Now Playing Player Overlay
+        SpotifyNowPlayingSheet(
+            isVisible = isNowPlayingExpanded,
+            currentTrack = currentTrack,
+            isPlaying = isPlaying,
+            currentPositionMs = currentPositionMs,
+            durationMs = durationMs,
+            progress = progress,
+            isShuffle = isShuffle,
+            repeatMode = repeatMode,
+            lyrics = lyrics,
+            currentLyricIndex = currentLyricIndex,
+            isLoadingLyrics = isLoadingLyrics,
+            onCollapse = { playerViewModel.collapseNowPlaying() },
+            onPlayPause = { playerViewModel.playOrPause() },
+            onNext = { playerViewModel.next() },
+            onPrevious = { playerViewModel.previous() },
+            onSeek = { playerViewModel.seekTo(it) },
+            onToggleShuffle = { playerViewModel.toggleShuffle() },
+            onToggleRepeat = { playerViewModel.toggleRepeat() }
+        )
     }
 }
