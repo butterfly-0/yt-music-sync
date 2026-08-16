@@ -63,7 +63,7 @@ class YTMusicApp : Application() {
         youtubeClient = YouTubeClient(getCookies = { userPreferences.cookies })
         youtubeExtractor = YouTubeExtractor(youtubeClient)
         lyricsHelper = com.ytmusic.downloader.audio.LyricsHelper(youtubeClient.getHttpClient())
-        audioTagger = AudioTagger(this, youtubeClient.getHttpClient())
+        audioTagger = AudioTagger()
         mediaStoreHelper = MediaStoreHelper(this)
 
         downloadRepository = DownloadRepository(
