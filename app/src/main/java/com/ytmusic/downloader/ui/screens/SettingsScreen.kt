@@ -321,7 +321,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Download,
+                        imageVector = Icons.Default.Refresh,
                         contentDescription = null,
                         tint = AccentRed,
                         modifier = Modifier.size(24.dp)
