@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">YT Music Sync</string>
+    <string name="sync_channel_name">Синхронізація треків</string>
+    <string name="sync_channel_desc">Сповіщення про фонове завантаження та синхронізацію вподобаної музики з YouTube</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">Головна</string>
+    <string name="nav_playlists">Плейлисти</string>
+    <string name="nav_settings">Налаштування</string>
+    
+    <!-- Home Screen -->
+    <string name="sync_status_idle">Готово до синхронізації</string>
+    <string name="sync_status_syncing">Триває синхронізація…</string>
+    <string name="sync_now">Синхронізувати зараз</string>
+    <string name="last_synced">Остання синхронізація</string>
+    <string name="never_synced">Ще не виконувалась</string>
+    <string name="tracks_downloaded">Завантажено треків</string>
+    <string name="search_placeholder">Пошук треку або артиста…</string>
+    <string name="no_tracks_yet">Завантажених треків поки немає. Натисніть «Синхронізувати зараз» або увійдіть в акаунт.</string>
+    
+    <!-- Playlists Screen -->
+    <string name="only_new_liked_title">Тільки нові вподобані</string>
+    <string name="only_new_liked_desc">Завантажувати лише ті треки, які були лайкнуті після встановлення додатку</string>
+    <string name="monitored_playlists">Відстежувані плейлисти</string>
+    <string name="add_playlist">Додати плейлист</string>
+    <string name="playlist_url_hint">Вставте посилання або ID плейлиста</string>
+    <string name="playlist_title_hint">Назва плейлиста (необов\'язково)</string>
+    
+    <!-- Settings Screen -->
+    <string name="account_section">Обліковий запис YouTube</string>
+    <string name="logged_in_as">Авторизовано</string>
+    <string name="not_logged_in">Не авторизовано</string>
+    <string name="login_button">Увійти в акаунт Google/YouTube</string>
+    <string name="logout_button">Вийти з акаунту</string>
+    
+    <!-- Format & Storage -->
+    <string name="audio_format_section">Формат та якість аудіо</string>
+    <string name="format_m4a">M4A (AAC 256 kbps - нативний без перекодування)</string>
+    <string name="format_mp3">MP3 (320 kbps - конвертація з ID3v2 тегами)</string>
+    <string name="storage_location">Папка збереження</string>
+    <string name="storage_default_path">Music/YouTubeSync/</string>
+    
+    <!-- Background sync options -->
+    <string name="sync_settings_section">Фонова синхронізація</string>
+    <string name="sync_interval_title">Інтервал перевірки</string>
+    <string name="wifi_only_title">Тільки по Wi-Fi</string>
+    <string name="wifi_only_desc">Не завантажувати треки через мобільний інтернет</string>
+    <string name="charging_only_title">Тільки під час зарядки</string>
+    <string name="charging_only_desc">Заощаджувати заряд батареї у фоні</string>
+</resources>
