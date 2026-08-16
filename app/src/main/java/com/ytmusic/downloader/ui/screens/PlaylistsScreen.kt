@@ -168,13 +168,12 @@ fun PlaylistsScreen(
                 }
             }
 
-            // Glass Info Banner
+            // Spotify Info Banner
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(GlassCard)
-                    .border(1.dp, GlassBorderSubtle, RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SpotifySurface)
                     .padding(14.dp)
             ) {
                 Row(
@@ -183,14 +182,14 @@ fun PlaylistsScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = AccentBlue,
+                        tint = SpotifyGreen,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Натисніть на будь-який плейлист, щоб переглянути список треків всередині.",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextSecondary,
+                            color = SpotifyTextSecondary,
                             fontSize = 12.sp
                         )
                     )
