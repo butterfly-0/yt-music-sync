@@ -781,3 +781,16 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         return (1..16).map { chars.random() }.joinToString("")
     }
 }
+
+data class AudioStreamInfo(
+    val url: String,
+    val mimeType: String,
+    val bitrate: Int,
+    val durationMs: Long
+)
+
+data class UserProfile(
+    val name: String,
+    val email: String
+)
+
