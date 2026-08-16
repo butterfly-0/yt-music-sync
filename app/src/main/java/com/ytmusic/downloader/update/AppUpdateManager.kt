@@ -71,7 +71,7 @@ class AppUpdateManager(
             val publishedAt = json.get("published_at")?.asString ?: ""
 
             val latestVersion = tagName.removePrefix("v").trim()
-            val currentVersion = "1.0.0" // Current base version
+            val currentVersion = BuildConfig.VERSION_NAME
 
             // Find .apk asset
             val assets = json.getAsJsonArray("assets") ?: com.google.gson.JsonArray()

@@ -321,7 +321,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SystemUpdate,
+                        imageVector = Icons.Default.Download,
                         contentDescription = null,
                         tint = AccentRed,
                         modifier = Modifier.size(24.dp)
@@ -329,7 +329,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Поточна версія: v1.0.0",
+                            text = "Поточна версія: v${com.ytmusic.downloader.BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary)
                         )
                         Text(
