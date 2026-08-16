@@ -1,6 +1,7 @@
 package com.ytmusic.downloader.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -43,9 +45,11 @@ import com.ytmusic.downloader.R
 import com.ytmusic.downloader.ui.components.SyncStatusCard
 import com.ytmusic.downloader.ui.components.TrackCard
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.BorderSubtle
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.DarkCard
+import com.ytmusic.downloader.ui.theme.GlassBorder
+import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
+import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.theme.TextTertiary
@@ -70,30 +74,31 @@ fun HomeScreen(
             .background(DarkBackground)
             .padding(horizontal = 16.dp)
     ) {
-        // App Header
-        Row(
+        // iOS Large Navigation Header
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 18.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(top = 18.dp, bottom = 12.dp)
         ) {
-            Column {
-                Text(
-                    text = "YT Music Sync",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+            Text(
+                text = "Медіатека",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    fontSize = 32.sp,
+                    letterSpacing = (-0.8).sp
                 )
-                Text(
-                    text = "Автоматичне збереження у високій якості",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+            )
+            Text(
+                text = "Вподобана музика та синхронізовані треки",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = TextSecondary,
+                    fontSize = 13.sp
                 )
-            }
+            )
         }
 
-        // Sync Status Card
+        // iOS Sync Card with Glassmorphism
         SyncStatusCard(
             syncState = syncState,
             lastSyncTimestamp = viewModel.userPrefs.lastSyncTimestamp,
@@ -102,7 +107,7 @@ fun HomeScreen(
             modifier = Modifier.padding(bottom = 14.dp)
         )
 
-        // Search Bar
+        // iOS Frosted Glass Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { viewModel.setSearchQuery(it) },
@@ -117,7 +122,8 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
-                    tint = TextSecondary
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             },
             trailingIcon = {
@@ -126,17 +132,18 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Очистити",
-                            tint = TextSecondary
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                containerColor = DarkCard,
+                containerColor = GlassCard,
                 focusedBorderColor = AccentRed,
-                unfocusedBorderColor = BorderSubtle,
+                unfocusedBorderColor = GlassBorderSubtle,
                 cursorColor = AccentRed,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
@@ -146,12 +153,12 @@ fun HomeScreen(
                 .padding(bottom = 12.dp)
         )
 
-        // Tracks List or Empty State
+        // Track List / Empty State
         if (tracks.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 80.dp),
+                    .padding(bottom = 100.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -160,16 +167,17 @@ fun HomeScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(76.dp)
                             .clip(CircleShape)
-                            .background(DarkCard),
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .border(1.dp, GlassBorderSubtle, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MusicOff,
                             contentDescription = null,
                             tint = TextTertiary,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(34.dp)
                         )
                     }
 
@@ -179,7 +187,8 @@ fun HomeScreen(
                         text = if (searchQuery.isNotBlank()) "Треків за запитом «$searchQuery» не знайдено" else stringResource(R.string.no_tracks_yet),
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = TextSecondary,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            fontSize = 14.sp
                         )
                     )
                 }
@@ -187,7 +196,7 @@ fun HomeScreen(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 90.dp),
+                contentPadding = PaddingValues(bottom = 160.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(tracks, key = { it.id }) { track ->

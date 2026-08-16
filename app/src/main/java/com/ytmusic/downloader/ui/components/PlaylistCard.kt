@@ -1,6 +1,7 @@
 package com.ytmusic.downloader.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,13 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,9 +38,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ytmusic.downloader.data.model.Playlist
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.BadgeBackground
-import com.ytmusic.downloader.ui.theme.DarkCard
-import com.ytmusic.downloader.ui.theme.DarkCardElevated
+import com.ytmusic.downloader.ui.theme.GlassBorder
+import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
+import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.theme.TextTertiary
@@ -53,28 +53,28 @@ fun PlaylistCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(GlassCard)
+            .border(1.dp, GlassBorderSubtle, RoundedCornerShape(20.dp))
+            .padding(14.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Thumbnail or Icon
+                // Artwork Container (Apple Squircle)
                 Box(
                     modifier = Modifier
                         .size(54.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(DarkCardElevated),
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.06f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (playlist.thumbnailUrl != null) {
@@ -89,12 +89,12 @@ fun PlaylistCard(
                             imageVector = if (playlist.isLikedMusic) Icons.Default.Favorite else Icons.Default.QueueMusic,
                             contentDescription = null,
                             tint = if (playlist.isLikedMusic) AccentRed else TextSecondary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 // Title & Info
                 Column(
@@ -105,7 +105,9 @@ fun PlaylistCard(
                             text = playlist.title,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                letterSpacing = (-0.2).sp
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -116,13 +118,15 @@ fun PlaylistCard(
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = AccentRed.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, AccentRed.copy(alpha = 0.3f)),
                                 modifier = Modifier.padding(start = 8.dp)
                             ) {
                                 Text(
                                     text = "Вподобане",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = AccentRed,
-                                        fontSize = 10.sp
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
                                     ),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
@@ -141,7 +145,7 @@ fun PlaylistCard(
                     )
                 }
 
-                // Enable Switch
+                // Apple Style Switch
                 Switch(
                     checked = playlist.isEnabled,
                     onCheckedChange = onToggleEnabled,
@@ -149,19 +153,24 @@ fun PlaylistCard(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = AccentRed,
                         uncheckedThumbColor = TextTertiary,
-                        uncheckedTrackColor = DarkCardElevated
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
                     )
                 )
 
                 if (!playlist.isLikedMusic) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     IconButton(
                         onClick = onDelete,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.05f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Видалити плейлист",
-                            tint = TextTertiary
+                            contentDescription = "Видалити",
+                            tint = TextTertiary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -173,9 +182,10 @@ fun PlaylistCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(BadgeBackground)
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.04f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -190,12 +200,11 @@ fun PlaylistCard(
                     Switch(
                         checked = playlist.syncOnlyNew,
                         onCheckedChange = onToggleSyncOnlyNew,
-                        modifier = Modifier.size(32.dp),
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = AccentRed,
                             uncheckedThumbColor = TextTertiary,
-                            uncheckedTrackColor = DarkCardElevated
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
                         )
                     )
                 }

@@ -1,24 +1,46 @@
 package com.ytmusic.downloader.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// OLED / Charcoal Dark Palette
-val DarkBackground = Color(0xFF101114)
-val DarkSurface = Color(0xFF18191E)
-val DarkCard = Color(0xFF22242C)
-val DarkCardElevated = Color(0xFF2C2F3A)
+// Premium iOS & Glassmorphism Palette
+val iOSBlack = Color(0xFF000000)
+val DarkBackground = Color(0xFF090A0D)
+val DarkSurface = Color(0xFF13141A)
+val DarkCard = Color(0xFF1C1D24)
+val DarkCardElevated = Color(0xFF262833)
 
-// Accent Colors
-val AccentRed = Color(0xFFFF334B)
-val AccentRedGradient = Color(0xFFFF5C70)
-val AccentBlue = Color(0xFF4E80EE)
-val AccentGreen = Color(0xFF22C55E)
+// Translucent Glass Surfaces
+val GlassSurface = Color(0x88181922)
+val GlassCard = Color(0x77232530)
+val GlassCardHover = Color(0x992B2D3A)
+val GlassBorder = Color(0x25FFFFFF)
+val GlassBorderSubtle = Color(0x14FFFFFF)
+val GlassBorderHighlight = Color(0x45FFFFFF)
 
-// Text and Content
-val TextPrimary = Color(0xFFF3F4F6)
-val TextSecondary = Color(0xFF9CA3AF)
-val TextTertiary = Color(0xFF6B7280)
+// Apple Music Vibrant Red Accents
+val AccentRed = Color(0xFFFA243C)
+val AccentRedGradient = Color(0xFFFF4565)
+val AccentPink = Color(0xFFFE3C72)
+val AccentBlue = Color(0xFF0A84FF)
+val AccentGreen = Color(0xFF30D158)
 
-// Borders & Dividers
-val BorderSubtle = Color(0xFF2E323D)
-val BadgeBackground = Color(0xFF1E2129)
+val AppleGradient = Brush.horizontalGradient(
+    listOf(AccentRed, AccentRedGradient)
+)
+
+val GlassGradient = Brush.verticalGradient(
+    listOf(Color(0x35FFFFFF), Color(0x05FFFFFF))
+)
+
+val AmbientGlowGradient = Brush.radialGradient(
+    listOf(Color(0x33FA243C), Color(0x00000000))
+)
+
+// iOS Typography Colors
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFF9898A0)
+val TextTertiary = Color(0xFF636366)
+
+val BadgeBackground = Color(0x40FFFFFF)
+val BorderSubtle = Color(0x1AFFFFFF)

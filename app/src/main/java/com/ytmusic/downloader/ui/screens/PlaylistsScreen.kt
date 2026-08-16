@@ -1,6 +1,7 @@
 package com.ytmusic.downloader.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -52,10 +51,12 @@ import com.ytmusic.downloader.R
 import com.ytmusic.downloader.ui.components.PlaylistCard
 import com.ytmusic.downloader.ui.theme.AccentBlue
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.BorderSubtle
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.DarkCard
 import com.ytmusic.downloader.ui.theme.DarkSurface
+import com.ytmusic.downloader.ui.theme.GlassBorder
+import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
+import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.theme.TextTertiary
@@ -82,8 +83,8 @@ fun PlaylistsScreen(
                 onClick = { showAddDialog = true },
                 containerColor = AccentRed,
                 contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(bottom = 70.dp)
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.padding(bottom = 85.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -99,44 +100,49 @@ fun PlaylistsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Header
+            // iOS Large Header
             Column(
                 modifier = Modifier.padding(top = 18.dp, bottom = 14.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.nav_playlists),
+                    text = "Плейлисти",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = TextPrimary,
+                        fontSize = 32.sp,
+                        letterSpacing = (-0.8).sp
                     )
                 )
                 Text(
-                    text = "Керування списками відтворення для завантаження",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                    text = "Синхронізація вподобаного та користувацьких списків",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
                 )
             }
 
-            // Info Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            // Glass Info Banner
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(GlassCard)
+                    .border(1.dp, GlassBorderSubtle, RoundedCornerShape(18.dp))
+                    .padding(14.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
                         tint = AccentBlue,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Додаток автоматично відстежує увімкнені плейлисти та завантажує нові треки за розкладом.",
+                        text = "Додаток автоматично моніторить увімкнені списки відтворення та синхронізує нові композиції.",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = TextSecondary,
                             fontSize = 12.sp
@@ -145,10 +151,12 @@ fun PlaylistsScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Playlists List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 120.dp),
+                contentPadding = PaddingValues(bottom = 160.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(playlists, key = { it.id }) { playlist ->
@@ -179,30 +187,35 @@ fun PlaylistsScreen(
                 }
             },
             containerColor = DarkSurface,
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.border(1.dp, GlassBorder, RoundedCornerShape(24.dp)),
             title = {
                 Text(
                     text = stringResource(R.string.add_playlist),
-                    style = MaterialTheme.typography.titleLarge.copy(color = TextPrimary)
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
                 )
             },
             text = {
                 Column {
                     Text(
                         text = "Вставте посилання на плейлист з YouTube або YouTube Music:",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                        style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary, fontSize = 13.sp)
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = inputUrl,
                         onValueChange = { inputUrl = it },
-                        placeholder = { Text(stringResource(R.string.playlist_url_hint), color = TextTertiary) },
+                        placeholder = { Text(stringResource(R.string.playlist_url_hint), color = TextTertiary, fontSize = 13.sp) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                            containerColor = DarkCard,
+                            containerColor = GlassCard,
                             focusedBorderColor = AccentRed,
-                            unfocusedBorderColor = BorderSubtle,
+                            unfocusedBorderColor = GlassBorderSubtle,
                             cursorColor = AccentRed,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -215,13 +228,13 @@ fun PlaylistsScreen(
                     OutlinedTextField(
                         value = inputTitle,
                         onValueChange = { inputTitle = it },
-                        placeholder = { Text(stringResource(R.string.playlist_title_hint), color = TextTertiary) },
+                        placeholder = { Text(stringResource(R.string.playlist_title_hint), color = TextTertiary, fontSize = 13.sp) },
                         singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = TextFieldDefaults.outlinedTextFieldColors(
-                            containerColor = DarkCard,
+                            containerColor = GlassCard,
                             focusedBorderColor = AccentRed,
-                            unfocusedBorderColor = BorderSubtle,
+                            unfocusedBorderColor = GlassBorderSubtle,
                             cursorColor = AccentRed,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -233,7 +246,7 @@ fun PlaylistsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = addError ?: "",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentRed)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentRed, fontSize = 12.sp)
                         )
                     }
                 }
@@ -249,12 +262,13 @@ fun PlaylistsScreen(
                         }
                     },
                     enabled = inputUrl.isNotBlank() && !isAdding,
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AccentRed)
                 ) {
                     if (isAdding) {
                         CircularProgressIndicator(
                             color = Color.White,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )
                     } else {

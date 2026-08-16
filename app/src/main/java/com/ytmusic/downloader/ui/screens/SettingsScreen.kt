@@ -1,6 +1,7 @@
 package com.ytmusic.downloader.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,9 +31,9 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -56,11 +57,13 @@ import com.ytmusic.downloader.data.model.AudioFormat
 import com.ytmusic.downloader.ui.theme.AccentBlue
 import com.ytmusic.downloader.ui.theme.AccentGreen
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.BorderSubtle
 import com.ytmusic.downloader.ui.theme.DarkBackground
 import com.ytmusic.downloader.ui.theme.DarkCard
 import com.ytmusic.downloader.ui.theme.DarkCardElevated
 import com.ytmusic.downloader.ui.theme.DarkSurface
+import com.ytmusic.downloader.ui.theme.GlassBorder
+import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
+import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.theme.TextTertiary
@@ -79,6 +82,7 @@ fun SettingsScreen(
     val syncInterval by viewModel.syncIntervalHours.collectAsState()
     val isWifiOnly by viewModel.isWifiOnly.collectAsState()
     val isChargingOnly by viewModel.isChargingOnly.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
 
     Column(
         modifier = modifier
@@ -86,33 +90,41 @@ fun SettingsScreen(
             .background(DarkBackground)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
-            .padding(bottom = 90.dp)
+            .padding(bottom = 160.dp)
     ) {
-        // Header
+        // iOS Header
         Column(
             modifier = Modifier.padding(top = 18.dp, bottom = 14.dp)
         ) {
             Text(
-                text = stringResource(R.string.nav_settings),
+                text = "Налаштування",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = TextPrimary,
+                    fontSize = 32.sp,
+                    letterSpacing = (-0.8).sp
                 )
             )
             Text(
-                text = "Конфігурація завантажень, якості та акаунту",
-                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                text = "Параметри акаунту, якості та оновлень",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
             )
         }
 
         // Section: YouTube Account
-        SettingsSectionHeader("Обліковий запис YouTube")
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier.fillMaxWidth()
+        SettingsSectionHeader("ОБЛІКОВИЙ ЗАПИС")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -120,7 +132,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
-                            .background(if (isLoggedIn) AccentGreen.copy(alpha = 0.15f) else DarkCardElevated),
+                            .background(if (isLoggedIn) AccentGreen.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.08f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -131,18 +143,19 @@ fun SettingsScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (isLoggedIn) (accountName.ifBlank { "Авторизовано" }) else "Не авторизовано",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
+                                color = TextPrimary,
+                                fontSize = 16.sp
                             )
                         )
                         Text(
-                            text = if (isLoggedIn) (accountEmail.ifBlank { "Доступ до приватного вподобаного активний" }) else "Увійдіть для синхронізації вподобаних треків",
+                            text = if (isLoggedIn) (accountEmail.ifBlank { "Доступ до вподобаного активний" }) else "Увійдіть для синхронізації приватної музики",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextSecondary,
                                 fontSize = 12.sp
@@ -156,7 +169,7 @@ fun SettingsScreen(
                 if (isLoggedIn) {
                     OutlinedButton(
                         onClick = { viewModel.logout() },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
@@ -171,7 +184,7 @@ fun SettingsScreen(
                 } else {
                     Button(
                         onClick = onNavigateToLogin,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -191,16 +204,19 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Section: Audio Format & Quality
-        SettingsSectionHeader("Формат та якість аудіо")
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier.fillMaxWidth()
+        SettingsSectionHeader("ФОРМАТ ТА ЯКІСТЬ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(14.dp)
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Column {
                 FormatOptionItem(
                     title = "M4A (256 kbps AAC)",
-                    subtitle = "Нативний потік з YouTube без втрати якості та найшвидше завантаження",
+                    subtitle = "Оригінальний потік без перекодування (максимальна швидкість)",
                     isSelected = audioFormat == AudioFormat.M4A,
                     onClick = { viewModel.setAudioFormat(AudioFormat.M4A) }
                 )
@@ -209,7 +225,7 @@ fun SettingsScreen(
 
                 FormatOptionItem(
                     title = "MP3 (320 kbps)",
-                    subtitle = "Конвертований формат з повним вшиванням ID3v2 тегів та обкладинки",
+                    subtitle = "Універсальний MP3 з повними ID3v2 тегами та обкладинкою",
                     isSelected = audioFormat == AudioFormat.MP3,
                     onClick = { viewModel.setAudioFormat(AudioFormat.MP3) }
                 )
@@ -218,15 +234,17 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Section: Background Sync & Constraints
-        SettingsSectionHeader("Фонова синхронізація")
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier.fillMaxWidth()
+        // Section: Background Sync
+        SettingsSectionHeader("ФОНОВИЙ МОНІТОРИНГ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                // Sync Interval Selection
+            Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -241,7 +259,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Інтервал перевірки",
-                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary)
+                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
                         )
                         Text(
                             text = "Кожні $syncInterval год",
@@ -253,8 +271,9 @@ fun SettingsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
+                // iOS Segmented Pills
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -264,16 +283,17 @@ fun SettingsScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (selected) AccentRed else DarkCardElevated)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selected) AccentRed else Color.White.copy(alpha = 0.06f))
+                                .border(0.8.dp, if (selected) AccentRed else GlassBorderSubtle, RoundedCornerShape(12.dp))
                                 .clickable { viewModel.setSyncIntervalHours(hours) }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (hours == 24) "1 раз/день" else "$hours год",
+                                text = if (hours == 24) "1 раз/д" else "$hours год",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                     color = if (selected) Color.White else TextSecondary
                                 )
                             )
@@ -287,18 +307,18 @@ fun SettingsScreen(
                 SettingsSwitchRow(
                     icon = Icons.Default.Wifi,
                     title = "Тільки по Wi-Fi",
-                    subtitle = "Не використовувати мобільний трафік у фоні",
+                    subtitle = "Не витрачати мобільний інтернет у фоні",
                     checked = isWifiOnly,
                     onCheckedChange = { viewModel.setWifiOnly(it) }
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Charging Only Switch
                 SettingsSwitchRow(
                     icon = Icons.Default.BatteryChargingFull,
-                    title = "Тільки під час зарядки",
-                    subtitle = "Заощаджувати заряд акумулятора",
+                    title = "Тільки на зарядці",
+                    subtitle = "Заощадження заряду батареї",
                     checked = isChargingOnly,
                     onCheckedChange = { viewModel.setChargingOnly(it) }
                 )
@@ -307,16 +327,17 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Section: App Updates
-        SettingsSectionHeader("Оновлення додатку")
-        val updateState by viewModel.updateState.collectAsState()
-
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier.fillMaxWidth()
+        // Section: App Updates (GitHub Releases)
+        SettingsSectionHeader("ОНОВЛЕННЯ ДОДАТКУ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -331,10 +352,14 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Поточна версія: v${com.ytmusic.downloader.BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary)
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                fontSize = 15.sp
+                            )
                         )
                         Text(
-                            text = "GitHub Releases (автооновлення без видалення)",
+                            text = "Безшовне оновлення поверх встановленої версії",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextTertiary,
                                 fontSize = 12.sp
@@ -349,8 +374,8 @@ fun SettingsScreen(
                     is com.ytmusic.downloader.update.UpdateState.Idle -> {
                         Button(
                             onClick = { viewModel.checkForUpdates() },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Перевірити оновлення", color = TextPrimary)
@@ -362,21 +387,22 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
                                 color = AccentRed,
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("Перевірка наявності нової версії…", color = TextSecondary)
+                            Text("Пошук нової версії на GitHub…", color = TextSecondary, fontSize = 13.sp)
                         }
                     }
                     is com.ytmusic.downloader.update.UpdateState.Available -> {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(DarkCard)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .border(0.8.dp, AccentGreen.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                                 .padding(12.dp)
                         ) {
                             Text(
@@ -397,11 +423,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(10.dp))
                             Button(
                                 onClick = { viewModel.downloadAndInstallUpdate(state.info) },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Завантажити та встановити оновлення", color = Color.White)
+                                Text("Завантажити та встановити", color = Color.White)
                             }
                         }
                     }
@@ -411,25 +437,25 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Завантаження нової версії…", color = TextPrimary)
-                                Text("${state.progressPercent}%", color = AccentRed)
+                                Text("Завантаження оновлення…", color = TextPrimary, fontSize = 13.sp)
+                                Text("${state.progressPercent}%", color = AccentRed, fontWeight = FontWeight.Bold)
                             }
                             Spacer(modifier = Modifier.height(6.dp))
-                            androidx.compose.material3.LinearProgressIndicator(
+                            LinearProgressIndicator(
                                 progress = { state.progressPercent / 100f },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp)),
                                 color = AccentRed,
-                                trackColor = DarkCardElevated
+                                trackColor = Color.White.copy(alpha = 0.08f)
                             )
                         }
                     }
                     is com.ytmusic.downloader.update.UpdateState.ReadyToInstall -> {
                         Button(
                             onClick = { viewModel.appUpdateManager.triggerInstall(state.apkFile) },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -443,7 +469,7 @@ fun SettingsScreen(
                         ) {
                             Icon(Icons.Default.Check, null, tint = AccentGreen, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("У вас встановлено найновішу версію", color = AccentGreen)
+                            Text("Встановлено найновішу версію", color = AccentGreen, fontSize = 13.sp)
                         }
                     }
                     is com.ytmusic.downloader.update.UpdateState.Error -> {
@@ -452,10 +478,10 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Button(
                                 onClick = { viewModel.checkForUpdates() },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = DarkCardElevated)
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f))
                             ) {
-                                Text("Повторити", color = TextPrimary)
+                                Text("Спробувати знову", color = TextPrimary)
                             }
                         }
                     }
@@ -466,14 +492,16 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Section: Storage info
-        SettingsSectionHeader("Сховище")
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkSurface),
-            modifier = Modifier.fillMaxWidth()
+        SettingsSectionHeader("СХОВИЩЕ")
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(GlassCard)
+                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .padding(16.dp)
         ) {
             Row(
-                modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -486,7 +514,7 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Системна папка аудіо",
-                        style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary)
+                        style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
                     )
                     Text(
                         text = "Music/YouTubeSync/ (автоматично доступно у плеєрах)",
@@ -505,12 +533,13 @@ fun SettingsScreen(
 private fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium.copy(
+        style = MaterialTheme.typography.labelSmall.copy(
             fontWeight = FontWeight.Bold,
-            color = AccentRed,
-            fontSize = 13.sp
+            color = TextTertiary,
+            fontSize = 12.sp,
+            letterSpacing = 0.8.sp
         ),
-        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
     )
 }
 
@@ -524,8 +553,8 @@ private fun FormatOptionItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) DarkCardElevated else Color.Transparent)
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent)
             .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -542,7 +571,8 @@ private fun FormatOptionItem(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = TextPrimary
+                    color = TextPrimary,
+                    fontSize = 14.sp
                 )
             )
             Text(
@@ -586,7 +616,7 @@ private fun SettingsSwitchRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary)
+                style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 14.sp)
             )
             Text(
                 text = subtitle,
@@ -603,7 +633,7 @@ private fun SettingsSwitchRow(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = AccentRed,
                 uncheckedThumbColor = TextTertiary,
-                uncheckedTrackColor = DarkCardElevated
+                uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
             )
         )
     }

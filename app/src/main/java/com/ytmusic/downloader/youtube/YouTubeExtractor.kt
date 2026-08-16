@@ -1,47 +1,72 @@
 package com.ytmusic.downloader.youtube
 
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.ytmusic.downloader.data.model.AudioFormat
 import com.ytmusic.downloader.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Request
 
 class YouTubeExtractor(private val client: YouTubeClient) {
 
     /**
-     * Fetches tracks from a YouTube Music playlist (e.g. "LM" for Liked Music, "LL", or "VLPL...").
+     * Fetches tracks from a YouTube Music / YouTube playlist (e.g. "LM", "LL", or "PL...").
+     * Uses multi-endpoint fallback and robust recursive JSON parsing.
      */
     suspend fun getPlaylistTracks(
         playlistId: String,
         maxTracks: Int = 100
     ): List<Track> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<Track>()
-        val browseId = if (playlistId.startsWith("VL") || playlistId == "LM" || playlistId == "LL") {
-            playlistId
-        } else {
-            "VL$playlistId"
+
+        // 1. Determine candidate browseIds
+        val candidateBrowseIds = when (playlistId) {
+            "LM", "FEmusic_liked_videos" -> listOf("FEmusic_liked_videos", "LM", "VLLM", "VLLL")
+            "LL", "VLLL" -> listOf("VLLL", "LL", "FEmusic_liked_videos")
+            else -> {
+                val cleanId = playlistId.removePrefix("VL")
+                listOf("VL$cleanId", cleanId)
+            }
         }
 
-        val requestBody = JsonObject().apply {
-            add("context", getMusicContext())
-            addProperty("browseId", browseId)
+        // Try YouTube Music client first
+        for (browseId in candidateBrowseIds) {
+            val requestBody = JsonObject().apply {
+                add("context", getMusicContext())
+                addProperty("browseId", browseId)
+            }
+
+            val response = client.postInnertube("browse", requestBody)
+            if (response != null) {
+                extractTracksRecursively(response, playlistId, tracks, maxTracks)
+                if (tracks.isNotEmpty()) {
+                    return@withContext tracks
+                }
+            }
         }
 
-        val response = client.postInnertube("browse", requestBody) ?: return@withContext emptyList()
+        // If YouTube Music returned 0 tracks, fallback to standard YouTube Web client
+        for (browseId in candidateBrowseIds) {
+            val requestBody = JsonObject().apply {
+                add("context", getWebContext())
+                addProperty("browseId", browseId)
+            }
 
-        try {
-            parsePlaylistResponse(response, playlistId, tracks, maxTracks)
-        } catch (e: Exception) {
-            e.printStackTrace()
+            val response = client.postWebInnertube("browse", requestBody)
+            if (response != null) {
+                extractTracksRecursively(response, playlistId, tracks, maxTracks)
+                if (tracks.isNotEmpty()) {
+                    return@withContext tracks
+                }
+            }
         }
 
         tracks
     }
 
     /**
-     * Extracts audio stream URL for a specific video ID.
+     * Extracts direct audio stream URL for a specific video ID.
      */
     suspend fun getAudioStreamUrl(videoId: String, preferredFormat: AudioFormat = AudioFormat.M4A): AudioStreamInfo? = withContext(Dispatchers.IO) {
         // Request player data using Android client context (gives direct stream URLs without cipher)
@@ -140,42 +165,55 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         }
     }
 
-    private fun parsePlaylistResponse(
-        root: JsonObject,
+    /**
+     * Robust recursive JSON tree walker to find track renderers regardless of nesting structure.
+     */
+    private fun extractTracksRecursively(
+        element: JsonElement,
         playlistId: String,
         tracks: MutableList<Track>,
         maxTracks: Int
     ) {
-        val contents = root.getAsJsonObject("contents")
-            ?.getAsJsonObject("singleColumnBrowseResultsRenderer")
-            ?.getAsJsonArray("tabs")
-            ?.get(0)?.asJsonObject
-            ?.getAsJsonObject("tabRenderer")
-            ?.getAsJsonObject("content")
-            ?.getAsJsonObject("sectionListRenderer")
-            ?.getAsJsonArray("contents") ?: return
+        if (tracks.size >= maxTracks) return
 
-        for (i in 0 until contents.size()) {
-            val section = contents.get(i).asJsonObject
-            val musicShelf = section.getAsJsonObject("musicShelfRenderer")
-                ?: section.getAsJsonObject("musicPlaylistShelfRenderer")
-                ?: continue
+        if (element.isJsonObject) {
+            val obj = element.asJsonObject
 
-            val items = musicShelf.getAsJsonArray("contents") ?: continue
-            for (j in 0 until items.size()) {
-                if (tracks.size >= maxTracks) break
-
-                val item = items.get(j).asJsonObject
-                val trackRenderer = item.getAsJsonObject("musicResponsiveListItemRenderer") ?: continue
-                val track = parseTrackItem(trackRenderer, playlistId)
-                if (track != null) {
-                    tracks.add(track)
+            // Check if it's a YouTube Music track item
+            if (obj.has("musicResponsiveListItemRenderer")) {
+                val renderer = obj.getAsJsonObject("musicResponsiveListItemRenderer")
+                parseMusicResponsiveItem(renderer, playlistId)?.let { track ->
+                    if (tracks.none { it.id == track.id }) {
+                        tracks.add(track)
+                    }
                 }
+                return
+            }
+
+            // Check if it's a standard YouTube video item
+            if (obj.has("playlistVideoRenderer")) {
+                val renderer = obj.getAsJsonObject("playlistVideoRenderer")
+                parsePlaylistVideoRenderer(renderer, playlistId)?.let { track ->
+                    if (tracks.none { it.id == track.id }) {
+                        tracks.add(track)
+                    }
+                }
+                return
+            }
+
+            // Recurse into all object fields
+            for (entry in obj.entrySet()) {
+                extractTracksRecursively(entry.value, playlistId, tracks, maxTracks)
+            }
+        } else if (element.isJsonArray) {
+            val array = element.asJsonArray
+            for (i in 0 until array.size()) {
+                extractTracksRecursively(array.get(i), playlistId, tracks, maxTracks)
             }
         }
     }
 
-    private fun parseTrackItem(item: JsonObject, playlistId: String): Track? {
+    private fun parseMusicResponsiveItem(item: JsonObject, playlistId: String): Track? {
         try {
             val flexColumns = item.getAsJsonArray("flexColumns") ?: return null
             if (flexColumns.size() < 2) return null
@@ -221,7 +259,6 @@ class YouTubeExtractor(private val client: YouTubeClient) {
                 thumbnailUrl = lastThumb.get("url")?.asString ?: thumbnailUrl
             }
 
-            // Clean thumbnail url (upgrade to HD)
             thumbnailUrl = getHighResThumbnailUrl(videoId, thumbnailUrl)
 
             return Track(
@@ -239,9 +276,41 @@ class YouTubeExtractor(private val client: YouTubeClient) {
         }
     }
 
+    private fun parsePlaylistVideoRenderer(item: JsonObject, playlistId: String): Track? {
+        try {
+            val videoId = item.get("videoId")?.asString ?: return null
+            val title = item.getAsJsonObject("title")
+                ?.getAsJsonArray("runs")?.get(0)?.asJsonObject?.get("text")?.asString
+                ?: item.getAsJsonObject("title")?.get("simpleText")?.asString
+                ?: "Unknown Title"
+
+            val artist = item.getAsJsonObject("shortBylineText")
+                ?.getAsJsonArray("runs")?.get(0)?.asJsonObject?.get("text")?.asString
+                ?: "YouTube Artist"
+
+            val thumbnails = item.getAsJsonObject("thumbnail")?.getAsJsonArray("thumbnails")
+            var thumbnailUrl = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+            if (thumbnails != null && thumbnails.size() > 0) {
+                thumbnailUrl = thumbnails.get(thumbnails.size() - 1).asJsonObject.get("url")?.asString ?: thumbnailUrl
+            }
+
+            return Track(
+                id = videoId,
+                title = title,
+                artist = artist,
+                album = "YouTube",
+                thumbnailUrl = getHighResThumbnailUrl(videoId, thumbnailUrl),
+                sourcePlaylistId = playlistId,
+                downloadedAt = System.currentTimeMillis()
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
     private fun getHighResThumbnailUrl(videoId: String, originalUrl: String): String {
         return if (originalUrl.contains("googleusercontent.com")) {
-            // Upgrade Google CDN image dimensions (e.g. =w120-h120 -> =w544-h544)
             originalUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w600-h600-l90-rj")
         } else {
             "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
@@ -253,6 +322,18 @@ class YouTubeExtractor(private val client: YouTubeClient) {
             val clientObj = JsonObject().apply {
                 addProperty("clientName", "WEB_REMIX")
                 addProperty("clientVersion", "1.20240506.01.00")
+                addProperty("hl", "uk")
+                addProperty("gl", "UA")
+            }
+            add("client", clientObj)
+        }
+    }
+
+    private fun getWebContext(): JsonObject {
+        return JsonObject().apply {
+            val clientObj = JsonObject().apply {
+                addProperty("clientName", "WEB")
+                addProperty("clientVersion", "2.20240506.00.00")
                 addProperty("hl", "uk")
                 addProperty("gl", "UA")
             }

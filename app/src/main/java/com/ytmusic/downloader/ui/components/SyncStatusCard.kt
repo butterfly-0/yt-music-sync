@@ -1,6 +1,5 @@
 package com.ytmusic.downloader.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -8,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +26,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -51,9 +49,10 @@ import com.ytmusic.downloader.data.model.SyncState
 import com.ytmusic.downloader.ui.theme.AccentBlue
 import com.ytmusic.downloader.ui.theme.AccentGreen
 import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.AccentRedGradient
+import com.ytmusic.downloader.ui.theme.AppleGradient
 import com.ytmusic.downloader.ui.theme.DarkCardElevated
-import com.ytmusic.downloader.ui.theme.DarkSurface
+import com.ytmusic.downloader.ui.theme.GlassBorder
+import com.ytmusic.downloader.ui.theme.GlassCard
 import com.ytmusic.downloader.ui.theme.TextPrimary
 import com.ytmusic.downloader.ui.theme.TextSecondary
 import com.ytmusic.downloader.ui.theme.TextTertiary
@@ -90,17 +89,16 @@ fun SyncStatusCard(
         }
     }
 
-    Card(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp)),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(GlassCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+            .padding(18.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -112,10 +110,12 @@ fun SyncStatusCard(
                         text = "Автоматична синхронізація",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = TextPrimary,
+                            fontSize = 16.sp,
+                            letterSpacing = (-0.3).sp
                         )
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Остання: $formattedLastSync",
                         style = MaterialTheme.typography.bodyMedium.copy(
@@ -125,18 +125,20 @@ fun SyncStatusCard(
                     )
                 }
 
-                // Total count badge
+                // Apple Glass Counter Pill
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(DarkCardElevated)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "$totalDownloadedCount треків",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = AccentBlue
+                            color = AccentBlue,
+                            fontSize = 12.sp
                         )
                     )
                 }
@@ -144,11 +146,9 @@ fun SyncStatusCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Sync State Details / Progress
+            // Sync State Feedback
             when (syncState) {
-                is SyncState.Idle -> {
-                    // Normal idle state
-                }
+                is SyncState.Idle -> {}
                 is SyncState.Checking -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -162,7 +162,7 @@ fun SyncStatusCard(
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = syncState.message,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary, fontSize = 13.sp)
                         )
                     }
                 }
@@ -176,13 +176,14 @@ fun SyncStatusCard(
                                 text = "Завантаження (${syncState.currentIndex}/${syncState.totalTracks}): ${syncState.currentTrackTitle}",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium,
-                                    color = TextPrimary
+                                    color = TextPrimary,
+                                    fontSize = 13.sp
                                 ),
                                 maxLines = 1
                             )
                             Text(
                                 text = "${syncState.progressPercent}%",
-                                style = MaterialTheme.typography.labelSmall.copy(color = AccentRed)
+                                style = MaterialTheme.typography.labelSmall.copy(color = AccentRed, fontWeight = FontWeight.Bold)
                             )
                         }
 
@@ -195,7 +196,7 @@ fun SyncStatusCard(
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
                             color = AccentRed,
-                            trackColor = DarkCardElevated
+                            trackColor = Color.White.copy(alpha = 0.08f)
                         )
                     }
                 }
@@ -213,7 +214,7 @@ fun SyncStatusCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (syncState.newTracksCount > 0) "Додано ${syncState.newTracksCount} нових треків" else "Нових треків не знайдено",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentGreen)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentGreen, fontSize = 13.sp)
                         )
                     }
                 }
@@ -231,7 +232,7 @@ fun SyncStatusCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = syncState.errorMessage,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentRed),
+                            style = MaterialTheme.typography.bodyMedium.copy(color = AccentRed, fontSize = 13.sp),
                             maxLines = 1
                         )
                     }
@@ -240,18 +241,19 @@ fun SyncStatusCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Action Button
+            // iOS Apple Music Sync Button (Vibrant gradient with glass reflection)
             Button(
                 onClick = onSyncClick,
                 enabled = !isSyncing,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .clip(RoundedCornerShape(16.dp)),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentRed,
                     disabledContainerColor = AccentRed.copy(alpha = 0.5f)
-                )
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -261,16 +263,17 @@ fun SyncStatusCard(
                         imageVector = Icons.Default.Sync,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(18.dp)
                             .then(if (isSyncing) Modifier.rotate(rotationAngle) else Modifier),
                         tint = Color.White
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (isSyncing) "Синхронізація…" else stringResource(R.string.sync_now),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            fontSize = 15.sp
                         )
                     )
                 }

@@ -25,7 +25,9 @@ class YouTubeClient(private val getCookies: () -> String) {
      */
     suspend fun postInnertube(endpoint: String, requestBody: JsonObject): JsonObject? = withContext(Dispatchers.IO) {
         val cookies = getCookies()
-        val sapisid = CookieManager.getCookieValue(cookies, "SAPISID") ?: CookieManager.getCookieValue(cookies, "__Secure-3PAPISID")
+        val sapisid = CookieManager.getCookieValue(cookies, "SAPISID")
+            ?: CookieManager.getCookieValue(cookies, "__Secure-3PAPISID")
+            ?: CookieManager.getCookieValue(cookies, "__Secure-1PAPISID")
 
         val url = "https://music.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"
         val requestBuilder = Request.Builder()
@@ -38,6 +40,7 @@ class YouTubeClient(private val getCookies: () -> String) {
             .addHeader("X-Origin", "https://music.youtube.com")
             .addHeader("Origin", "https://music.youtube.com")
             .addHeader("Referer", "https://music.youtube.com/")
+            .addHeader("X-Goog-AuthUser", "0")
 
         if (cookies.isNotBlank()) {
             requestBuilder.addHeader("Cookie", cookies)
@@ -45,6 +48,47 @@ class YouTubeClient(private val getCookies: () -> String) {
 
         if (!sapisid.isNullOrBlank()) {
             val authHeader = CookieManager.generateSapisidHash(sapisid, "https://music.youtube.com")
+            requestBuilder.addHeader("Authorization", authHeader)
+        }
+
+        try {
+            val response = okHttpClient.newCall(requestBuilder.build()).execute()
+            val bodyString = response.body?.string() ?: return@withContext null
+            JsonParser.parseString(bodyString).asJsonObject
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Executes standard YouTube Web Innertube API request.
+     */
+    suspend fun postWebInnertube(endpoint: String, requestBody: JsonObject): JsonObject? = withContext(Dispatchers.IO) {
+        val cookies = getCookies()
+        val sapisid = CookieManager.getCookieValue(cookies, "SAPISID")
+            ?: CookieManager.getCookieValue(cookies, "__Secure-3PAPISID")
+            ?: CookieManager.getCookieValue(cookies, "__Secure-1PAPISID")
+
+        val url = "https://www.youtube.com/youtubei/v1/$endpoint?prettyPrint=false"
+        val requestBuilder = Request.Builder()
+            .url(url)
+            .post(requestBody.toString().toRequestBody(jsonMediaType))
+            .addHeader("Content-Type", "application/json")
+            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .addHeader("X-YouTube-Client-Name", "1") // WEB
+            .addHeader("X-YouTube-Client-Version", "2.20240506.00.00")
+            .addHeader("X-Origin", "https://www.youtube.com")
+            .addHeader("Origin", "https://www.youtube.com")
+            .addHeader("Referer", "https://www.youtube.com/")
+            .addHeader("X-Goog-AuthUser", "0")
+
+        if (cookies.isNotBlank()) {
+            requestBuilder.addHeader("Cookie", cookies)
+        }
+
+        if (!sapisid.isNullOrBlank()) {
+            val authHeader = CookieManager.generateSapisidHash(sapisid, "https://www.youtube.com")
             requestBuilder.addHeader("Authorization", authHeader)
         }
 

@@ -8,11 +8,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.ytmusic.downloader.ui.components.BottomNavBar
+import com.ytmusic.downloader.ui.components.MiniPlayerBar
 import com.ytmusic.downloader.ui.components.Screen
 import com.ytmusic.downloader.ui.screens.HomeScreen
 import com.ytmusic.downloader.ui.screens.LoginScreen
@@ -92,23 +97,38 @@ fun MainAppNavHost(
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
     val showBottomBar = currentRoute != Screen.Login.route
+    val currentPlayingId by mainViewModel.currentPlayingTrackId.collectAsState()
+    val isPlaying by mainViewModel.isPlaying.collectAsState()
+    val tracks by mainViewModel.tracks.collectAsState()
+    val playingTrack = tracks.firstOrNull { it.id == currentPlayingId }
 
     Scaffold(
         containerColor = DarkBackground,
         bottomBar = {
             if (showBottomBar) {
-                BottomNavBar(
-                    currentRoute = currentRoute,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                Column {
+                    if (playingTrack != null) {
+                        MiniPlayerBar(
+                            currentTrack = playingTrack,
+                            isPlaying = isPlaying,
+                            onTogglePlay = { mainViewModel.togglePlayPreview(playingTrack) },
+                            onClose = { mainViewModel.togglePlayPreview(playingTrack) }
+                        )
                     }
-                )
+
+                    BottomNavBar(
+                        currentRoute = currentRoute,
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
             }
         },
         modifier = Modifier.fillMaxSize()
@@ -139,6 +159,7 @@ fun MainAppNavHost(
                 LoginScreen(
                     viewModel = settingsViewModel,
                     onLoginSuccess = {
+                        mainViewModel.startSync()
                         navController.popBackStack()
                     },
                     onBack = {
