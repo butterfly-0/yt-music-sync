@@ -69,17 +69,12 @@ import com.ytmusic.downloader.R
 import com.ytmusic.downloader.data.model.Playlist
 import com.ytmusic.downloader.data.model.Track
 import com.ytmusic.downloader.ui.components.PlaylistCard
-import com.ytmusic.downloader.ui.theme.AccentBlue
-import com.ytmusic.downloader.ui.theme.AccentGreen
-import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.DarkBackground
-import com.ytmusic.downloader.ui.theme.DarkCard
-import com.ytmusic.downloader.ui.theme.DarkSurface
-import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
-import com.ytmusic.downloader.ui.theme.GlassCard
-import com.ytmusic.downloader.ui.theme.TextPrimary
-import com.ytmusic.downloader.ui.theme.TextSecondary
-import com.ytmusic.downloader.ui.theme.TextTertiary
+import com.ytmusic.downloader.ui.theme.SpotifyCard
+import com.ytmusic.downloader.ui.theme.SpotifyCardHover
+import com.ytmusic.downloader.ui.theme.SpotifyDark
+import com.ytmusic.downloader.ui.theme.SpotifyGreen
+import com.ytmusic.downloader.ui.theme.SpotifySurface
+import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
 import com.ytmusic.downloader.ui.viewmodel.PlaylistsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,14 +100,16 @@ fun PlaylistsScreen(
     var inputTitle by remember { mutableStateOf("") }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = SpotifyDark,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = AccentRed,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.padding(bottom = 85.dp)
+                containerColor = SpotifyGreen,
+                contentColor = Color.Black,
+                shape = CircleShape,
+                modifier = Modifier
+                    .padding(bottom = 90.dp)
+                    .shadow(elevation = 12.dp, shape = CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -128,7 +125,7 @@ fun PlaylistsScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            // iOS Large Header with Sync button
+            // Spotify Header with Sync button
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -141,15 +138,14 @@ fun PlaylistsScreen(
                         text = "Плейлисти",
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            fontSize = 32.sp,
-                            letterSpacing = (-0.8).sp
+                            color = Color.White,
+                            fontSize = 28.sp
                         )
                     )
                     Text(
-                        text = "Синхронізація вподобаного та ваших плейлистів",
+                        text = "Синхронізація вподобаного та плейлистів",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextSecondary,
+                            color = SpotifyTextSecondary,
                             fontSize = 13.sp
                         )
                     )
@@ -160,12 +156,12 @@ fun PlaylistsScreen(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(SpotifySurface)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Sync,
                         contentDescription = "Оновити плейлисти",
-                        tint = AccentRed,
+                        tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -238,7 +234,7 @@ fun PlaylistsScreen(
         ModalBottomSheet(
             onDismissRequest = { viewModel.closePlaylistDetail() },
             sheetState = sheetState,
-            containerColor = DarkSurface,
+            containerColor = SpotifyDark,
             scrimColor = Color.Black.copy(alpha = 0.65f),
             dragHandle = {
                 Box(
@@ -265,9 +261,8 @@ fun PlaylistsScreen(
                     Box(
                         modifier = Modifier
                             .size(72.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SpotifySurface),
                         contentAlignment = Alignment.Center
                     ) {
                         if (playlist.thumbnailUrl != null) {
@@ -281,7 +276,7 @@ fun PlaylistsScreen(
                             Icon(
                                 imageVector = if (playlist.isLikedMusic) Icons.Default.Favorite else Icons.Default.QueueMusic,
                                 contentDescription = null,
-                                tint = if (playlist.isLikedMusic) AccentRed else TextSecondary,
+                                tint = if (playlist.isLikedMusic) SpotifyGreen else SpotifyTextSecondary,
                                 modifier = Modifier.size(36.dp)
                             )
                         }
@@ -294,7 +289,7 @@ fun PlaylistsScreen(
                             text = playlist.title,
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                color = Color.White,
                                 fontSize = 18.sp
                             ),
                             maxLines = 2,
@@ -304,7 +299,7 @@ fun PlaylistsScreen(
                         Text(
                             text = if (isLoadingTracks) "Отримання треків…" else "${playlistTracks.size} знайдених треків",
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
+                                color = SpotifyTextSecondary,
                                 fontSize = 13.sp
                             )
                         )
@@ -315,12 +310,12 @@ fun PlaylistsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(SpotifySurface)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Закрити",
-                            tint = TextSecondary,
+                            tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -339,13 +334,13 @@ fun PlaylistsScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(32.dp),
-                                color = AccentRed,
+                                color = SpotifyGreen,
                                 strokeWidth = 3.dp
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
                                 text = "Завантаження списку треків з YouTube Music…",
-                                color = TextSecondary,
+                                color = SpotifyTextSecondary,
                                 fontSize = 13.sp
                             )
                         }
@@ -359,7 +354,7 @@ fun PlaylistsScreen(
                     ) {
                         Text(
                             text = "У цьому плейлисті поки немає доступних треків",
-                            color = TextTertiary,
+                            color = SpotifyTextSecondary,
                             fontSize = 14.sp
                         )
                     }
@@ -375,16 +370,17 @@ fun PlaylistsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color.White.copy(alpha = 0.04f))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SpotifySurface)
+                                    .clickable { viewModel.togglePlayPreview(track) }
                                     .padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Color.White.copy(alpha = 0.08f)),
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(SpotifyCardHover),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (track.thumbnailUrl != null) {
@@ -395,7 +391,7 @@ fun PlaylistsScreen(
                                             modifier = Modifier.matchParentSize()
                                         )
                                     } else {
-                                        Icon(Icons.Default.MusicNote, null, tint = TextTertiary)
+                                        Icon(Icons.Default.MusicNote, null, tint = SpotifyTextSecondary)
                                     }
                                 }
 
@@ -405,8 +401,8 @@ fun PlaylistsScreen(
                                     Text(
                                         text = track.title,
                                         style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Medium,
-                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isThisPlaying) SpotifyGreen else Color.White,
                                             fontSize = 14.sp
                                         ),
                                         maxLines = 1,
@@ -415,7 +411,7 @@ fun PlaylistsScreen(
                                     Text(
                                         text = track.artist,
                                         style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = TextSecondary,
+                                            color = SpotifyTextSecondary,
                                             fontSize = 12.sp
                                         ),
                                         maxLines = 1,
@@ -431,12 +427,12 @@ fun PlaylistsScreen(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(AccentRed.copy(alpha = 0.15f)),
+                                            .background(SpotifyGreen.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(16.dp),
-                                            color = AccentRed,
+                                            color = SpotifyGreen,
                                             strokeWidth = 2.dp
                                         )
                                     }
@@ -445,13 +441,13 @@ fun PlaylistsScreen(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(AccentGreen.copy(alpha = 0.15f)),
+                                            .background(SpotifyGreen.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = "Завантажено",
-                                            tint = AccentGreen,
+                                            tint = SpotifyGreen,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -461,12 +457,12 @@ fun PlaylistsScreen(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(AccentRed.copy(alpha = 0.15f))
+                                            .background(SpotifySurface)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Download,
                                             contentDescription = "Завантажити трек",
-                                            tint = AccentRed,
+                                            tint = SpotifyGreen,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -486,18 +482,18 @@ fun PlaylistsScreen(
                 showAddDialog = false
                 viewModel.clearError()
             },
-            containerColor = DarkCard,
+            containerColor = SpotifyCard,
             title = {
                 Text(
                     text = "Додати список відтворення",
-                    style = MaterialTheme.typography.titleLarge.copy(color = TextPrimary)
+                    style = MaterialTheme.typography.titleLarge.copy(color = Color.White, fontWeight = FontWeight.Bold)
                 )
             },
             text = {
                 Column {
                     Text(
-                        text = "Введіть посилання на плейлист або його ідентифікатор (наприклад: PLr...):",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                        text = "Введіть посилання на плейлист або його ID (наприклад: PL...):",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = SpotifyTextSecondary)
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     OutlinedTextField(
@@ -507,11 +503,11 @@ fun PlaylistsScreen(
                         placeholder = { Text("https://music.youtube.com/playlist?list=PL...") },
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = DarkSurface,
-                            unfocusedContainerColor = DarkSurface,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedIndicatorColor = AccentRed
+                            focusedContainerColor = SpotifySurface,
+                            unfocusedContainerColor = SpotifySurface,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedIndicatorColor = SpotifyGreen
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -520,14 +516,14 @@ fun PlaylistsScreen(
                         value = inputTitle,
                         onValueChange = { inputTitle = it },
                         label = { Text("Назва (опціонально)") },
-                        placeholder = { Text("Мій улюблений рок") },
+                        placeholder = { Text("Мій плейлист") },
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = DarkSurface,
-                            unfocusedContainerColor = DarkSurface,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedIndicatorColor = AccentRed
+                            focusedContainerColor = SpotifySurface,
+                            unfocusedContainerColor = SpotifySurface,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedIndicatorColor = SpotifyGreen
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -536,7 +532,7 @@ fun PlaylistsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = addError!!,
-                            style = MaterialTheme.typography.bodySmall.copy(color = AccentRed)
+                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFFF5252))
                         )
                     }
                 }
@@ -554,18 +550,18 @@ fun PlaylistsScreen(
                             inputTitle = ""
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
-                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
+                    shape = RoundedCornerShape(20.dp),
                     enabled = !isAdding && inputUrl.isNotBlank()
                 ) {
                     if (isAdding) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Color.White,
+                            color = Color.Black,
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Додати")
+                        Text("Додати", fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -576,9 +572,10 @@ fun PlaylistsScreen(
                         viewModel.clearError()
                     }
                 ) {
-                    Text("Скасувати", color = TextSecondary)
+                    Text("Скасувати", color = SpotifyTextSecondary)
                 }
             }
         )
     }
 }
+

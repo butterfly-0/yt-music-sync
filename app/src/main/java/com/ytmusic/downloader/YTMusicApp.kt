@@ -1,6 +1,9 @@
 package com.ytmusic.downloader
 
-import android.app.Application
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.ytmusic.downloader.audio.AudioPreviewPlayer
 import com.ytmusic.downloader.audio.AudioTagger
 import com.ytmusic.downloader.audio.MediaStoreHelper
@@ -13,7 +16,7 @@ import com.ytmusic.downloader.worker.SyncWorker
 import com.ytmusic.downloader.youtube.YouTubeClient
 import com.ytmusic.downloader.youtube.YouTubeExtractor
 
-class YTMusicApp : Application() {
+class YTMusicApp : Application(), ImageLoaderFactory {
 
     lateinit var database: AppDatabase
         private set
@@ -89,6 +92,25 @@ class YTMusicApp : Application() {
 
         // Schedule periodic sync if configured
         SyncWorker.schedulePeriodicSync(this, userPreferences)
+    }
+
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(250L * 1024 * 1024)
+                    .build()
+            }
+            .crossfade(true)
+            .respectCacheHeaders(false)
+            .allowHardware(true)
+            .build()
     }
 
     override fun onTerminate() {

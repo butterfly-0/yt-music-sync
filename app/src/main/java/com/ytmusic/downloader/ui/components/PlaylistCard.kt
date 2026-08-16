@@ -1,7 +1,6 @@
 package com.ytmusic.downloader.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -39,12 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ytmusic.downloader.data.model.Playlist
-import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
-import com.ytmusic.downloader.ui.theme.GlassCard
-import com.ytmusic.downloader.ui.theme.TextPrimary
-import com.ytmusic.downloader.ui.theme.TextSecondary
-import com.ytmusic.downloader.ui.theme.TextTertiary
+import com.ytmusic.downloader.ui.theme.SpotifyCard
+import com.ytmusic.downloader.ui.theme.SpotifyCardHover
+import com.ytmusic.downloader.ui.theme.SpotifyGreen
+import com.ytmusic.downloader.ui.theme.SpotifyLikedGradient
+import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
 
 @Composable
 fun PlaylistCard(
@@ -58,11 +55,10 @@ fun PlaylistCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(GlassCard)
-            .border(1.dp, GlassBorderSubtle, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(SpotifyCard)
             .clickable { onClick() }
-            .padding(14.dp)
+            .padding(12.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -71,16 +67,29 @@ fun PlaylistCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Artwork Container (Apple Squircle)
+                // Square Spotify Artwork
                 Box(
                     modifier = Modifier
                         .size(54.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .border(0.8.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (playlist.isLikedMusic) SpotifyCardHover else SpotifyCardHover),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (playlist.thumbnailUrl != null) {
+                    if (playlist.isLikedMusic) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(SpotifyLikedGradient),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    } else if (playlist.thumbnailUrl != null) {
                         AsyncImage(
                             model = playlist.thumbnailUrl,
                             contentDescription = playlist.title,
@@ -89,141 +98,97 @@ fun PlaylistCard(
                         )
                     } else {
                         Icon(
-                            imageVector = if (playlist.isLikedMusic) Icons.Default.Favorite else Icons.Default.QueueMusic,
+                            imageVector = Icons.Default.QueueMusic,
                             contentDescription = null,
-                            tint = if (playlist.isLikedMusic) AccentRed else TextSecondary,
+                            tint = SpotifyTextSecondary,
                             modifier = Modifier.size(26.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Title & Info
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = playlist.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                letterSpacing = (-0.2).sp
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
+                    Text(
+                        text = playlist.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 14.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
-                        if (playlist.isLikedMusic) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = AccentRed.copy(alpha = 0.15f),
-                                border = androidx.compose.foundation.BorderStroke(0.5.dp, AccentRed.copy(alpha = 0.3f)),
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Text(
-                                    text = "Вподобане",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = AccentRed,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = if (playlist.trackCount > 0) "Плейлист • ${playlist.trackCount} треків" else "Плейлист YouTube Music",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = SpotifyTextSecondary,
+                            fontSize = 12.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (playlist.trackCount > 0) "${playlist.trackCount} треків • Натисніть для перегляду" else "Натисніть для перегляду треків",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                // Delete action (if not default liked music)
+                if (!playlist.isLikedMusic) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Видалити",
+                            tint = SpotifyTextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = SpotifyTextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
-                // Apple Style Switch
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Options Row: Sync Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Автосинхронізація",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+
                 Switch(
                     checked = playlist.isEnabled,
                     onCheckedChange = onToggleEnabled,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = AccentRed,
-                        uncheckedThumbColor = TextTertiary,
-                        uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
-                    )
+                        checkedTrackColor = SpotifyGreen,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier.height(24.dp)
                 )
-
-                if (!playlist.isLikedMusic) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.05f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Видалити",
-                            tint = TextTertiary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Відкрити",
-                        tint = TextTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Sync mode row
-            if (playlist.isEnabled) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.04f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (playlist.syncOnlyNew) "Завантажувати лише нові треки" else "Повна синхронізація",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextSecondary,
-                            fontSize = 12.sp
-                        )
-                    )
-
-                    Switch(
-                        checked = playlist.syncOnlyNew,
-                        onCheckedChange = onToggleSyncOnlyNew,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentRed,
-                            uncheckedThumbColor = TextTertiary,
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
-                        )
-                    )
-                }
             }
         }
     }

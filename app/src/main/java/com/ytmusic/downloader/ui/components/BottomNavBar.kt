@@ -35,13 +35,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import com.ytmusic.downloader.R
-import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.DarkSurface
-import com.ytmusic.downloader.ui.theme.GlassBorder
-import com.ytmusic.downloader.ui.theme.GlassSurface
-import com.ytmusic.downloader.ui.theme.TextPrimary
-import com.ytmusic.downloader.ui.theme.TextTertiary
+import com.ytmusic.downloader.ui.theme.SpotifyGreen
+import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
 
 sealed class Screen(
     val route: String,
@@ -97,48 +98,65 @@ fun BottomNavBar(
         Screen.Settings
     )
 
-    // iOS Floating Glassmorphic Tab Bar
+    // Authentic Spotify Bottom Navigation Bar
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 14.dp)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.Black.copy(alpha = 0.75f),
+                        Color.Black
+                    )
+                )
+            )
+            .border(
+                width = 0.5.dp,
+                color = Color.White.copy(alpha = 0.08f)
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(DarkSurface)
-                .border(1.dp, GlassBorder, RoundedCornerShape(32.dp))
-                .padding(horizontal = 8.dp),
+                .height(54.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
+                val scale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.05f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy
+                    ),
+                    label = "nav_scale"
+                )
 
                 Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .clickable { onNavigate(screen.route) }
-                        .padding(horizontal = 18.dp, vertical = 6.dp),
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
                         contentDescription = stringResource(screen.titleRes),
-                        tint = if (isSelected) AccentRed else TextTertiary,
-                        modifier = Modifier.size(22.dp)
+                        tint = if (isSelected) Color.White else SpotifyTextSecondary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .scale(scale)
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = stringResource(screen.titleRes),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) AccentRed else TextTertiary
-                        ),
-                        modifier = Modifier.padding(top = 2.dp)
+                            color = if (isSelected) Color.White else SpotifyTextSecondary
+                        )
                     )
                 }
             }

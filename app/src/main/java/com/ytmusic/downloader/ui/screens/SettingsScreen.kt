@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,18 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ytmusic.downloader.data.model.AudioFormat
-import com.ytmusic.downloader.ui.theme.AccentBlue
-import com.ytmusic.downloader.ui.theme.AccentGreen
-import com.ytmusic.downloader.ui.theme.AccentRed
-import com.ytmusic.downloader.ui.theme.DarkBackground
-import com.ytmusic.downloader.ui.theme.DarkCard
-import com.ytmusic.downloader.ui.theme.DarkSurface
-import com.ytmusic.downloader.ui.theme.GlassBorder
-import com.ytmusic.downloader.ui.theme.GlassBorderSubtle
-import com.ytmusic.downloader.ui.theme.GlassCard
-import com.ytmusic.downloader.ui.theme.TextPrimary
-import com.ytmusic.downloader.ui.theme.TextSecondary
-import com.ytmusic.downloader.ui.theme.TextTertiary
+import com.ytmusic.downloader.ui.theme.SpotifyCard
+import com.ytmusic.downloader.ui.theme.SpotifyCardHover
+import com.ytmusic.downloader.ui.theme.SpotifyDark
+import com.ytmusic.downloader.ui.theme.SpotifyGreen
+import com.ytmusic.downloader.ui.theme.SpotifySurface
+import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
 import com.ytmusic.downloader.ui.viewmodel.SettingsViewModel
 
 @Composable
@@ -100,12 +95,12 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(SpotifyDark)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
             .padding(bottom = 160.dp)
     ) {
-        // iOS Header
+        // Spotify Header
         Column(
             modifier = Modifier.padding(top = 18.dp, bottom = 14.dp)
         ) {
@@ -113,28 +108,26 @@ fun SettingsScreen(
                 text = "Налаштування",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    fontSize = 32.sp,
-                    letterSpacing = (-0.8).sp
+                    color = Color.White,
+                    fontSize = 28.sp
                 )
             )
             Text(
-                text = "Параметри акаунту, сховища та оновлень",
+                text = "Параметри акаунту, формату та сховища",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = TextSecondary,
+                    color = SpotifyTextSecondary,
                     fontSize = 13.sp
                 )
             )
         }
 
         // Section: YouTube Account
-        SettingsSectionHeader("ОБЛІКОВИЙ ЗАПИС")
+        SpotifySectionHeader("ОБЛІКОВИЙ ЗАПИС")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(10.dp))
+                .background(SpotifyCard)
                 .padding(16.dp)
         ) {
             Column {
@@ -143,15 +136,15 @@ fun SettingsScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
-                            .background(if (isLoggedIn) AccentGreen.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.08f)),
+                            .background(if (isLoggedIn) SpotifyGreen.copy(alpha = 0.2f) else SpotifySurface),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
                             contentDescription = null,
-                            tint = if (isLoggedIn) AccentGreen else TextTertiary,
+                            tint = if (isLoggedIn) SpotifyGreen else SpotifyTextSecondary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -162,15 +155,15 @@ fun SettingsScreen(
                         Text(
                             text = if (isLoggedIn) (accountName.ifBlank { "Авторизовано" }) else "Не авторизовано",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                fontSize = 16.sp
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 15.sp
                             )
                         )
                         Text(
-                            text = if (isLoggedIn) (accountEmail.ifBlank { "Доступ до вподобаного активний" }) else "Увійдіть для синхронізації приватної музики",
+                            text = if (isLoggedIn) (accountEmail.ifBlank { "Синхронізація плейлистів активна" }) else "Увійдіть для синхронізації вподобаного",
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
+                                color = SpotifyTextSecondary,
                                 fontSize = 12.sp
                             )
                         )
@@ -182,33 +175,33 @@ fun SettingsScreen(
                 if (isLoggedIn) {
                     OutlinedButton(
                         onClick = { viewModel.logout() },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             imageVector = Icons.Default.Logout,
                             contentDescription = null,
-                            tint = AccentRed,
+                            tint = Color(0xFFFF5252),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Вийти з акаунту", color = AccentRed)
+                        Text("Вийти з акаунту", color = Color(0xFFFF5252))
                     }
                 } else {
                     Button(
                         onClick = onNavigateToLogin,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             imageVector = Icons.Default.Login,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = Color.Black,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Увійти через Google / YouTube", color = Color.White)
+                        Text("Увійти через Google / YouTube", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -217,76 +210,81 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Section: Storage & Directory
-        SettingsSectionHeader("СХОВИЩЕ ТА ПАПКА ДЛЯ МУЗИКИ")
+        SpotifySectionHeader("СХОВИЩЕ ТА ПАПКА ДЛЯ МУЗИКИ")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(10.dp))
+                .background(SpotifyCard)
                 .padding(16.dp)
         ) {
             Column {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .clickable { viewModel.openMusicFolder() }
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.FolderOpen,
                         contentDescription = null,
-                        tint = AccentBlue,
-                        modifier = Modifier.size(26.dp)
+                        tint = SpotifyGreen,
+                        modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Системна папка аудіо",
-                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
+                            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = storageDisplayName,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = AccentBlue,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            text = "Music/YouTubeSync/ (Доступна у всіх плеєрах)",
+                            style = MaterialTheme.typography.bodySmall.copy(color = SpotifyTextSecondary, fontSize = 11.sp)
                         )
                     }
                     Icon(
                         imageVector = Icons.Default.OpenInNew,
                         contentDescription = "Відкрити",
-                        tint = TextTertiary,
+                        tint = SpotifyTextSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { folderPickerLauncher.launch(null) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Власна папка збереження",
+                            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = storageDisplayName ?: "Стандартна системна директорія",
+                            style = MaterialTheme.typography.bodySmall.copy(color = SpotifyTextSecondary, fontSize = 11.sp)
+                        )
+                    }
                     Button(
                         onClick = { folderPickerLauncher.launch(null) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifySurface, contentColor = Color.White)
                     ) {
-                        Text("Змінити теку", color = TextPrimary, fontSize = 13.sp)
-                    }
-
-                    if (storageDisplayName != "Music/YouTubeSync") {
-                        OutlinedButton(
-                            onClick = { viewModel.resetToDefaultMusicFolder() },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Скинути", color = TextSecondary, fontSize = 13.sp)
-                        }
+                        Text("Обрати", fontSize = 12.sp)
                     }
                 }
             }
@@ -294,29 +292,28 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Section: Audio Format & Quality
-        SettingsSectionHeader("ФОРМАТ ТА ЯКІСТЬ")
+        // Section: Audio Format
+        SpotifySectionHeader("ФОРМАТ ТА ЯКІСТЬ АУДІО")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
-                .padding(14.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(SpotifyCard)
+                .padding(16.dp)
         ) {
             Column {
-                FormatOptionItem(
-                    title = "M4A (256 kbps AAC)",
-                    subtitle = "Оригінальний потік без перекодування (максимальна швидкість)",
+                SpotifyFormatOption(
+                    title = "M4A (AAC 256 kbps)",
+                    subtitle = "Нативна якість без перекодування • Рекомендовано",
                     isSelected = audioFormat == AudioFormat.M4A,
                     onClick = { viewModel.setAudioFormat(AudioFormat.M4A) }
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                FormatOptionItem(
+                SpotifyFormatOption(
                     title = "MP3 (320 kbps)",
-                    subtitle = "Універсальний MP3 з повними ID3v2 тегами та обкладинкою",
+                    subtitle = "Максимальна сумісність із тегами ID3v2",
                     isSelected = audioFormat == AudioFormat.MP3,
                     onClick = { viewModel.setAudioFormat(AudioFormat.MP3) }
                 )
@@ -326,90 +323,29 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Section: Background Sync
-        SettingsSectionHeader("ФОНОВИЙ МОНІТОРИНГ")
+        SpotifySectionHeader("ФОНОВА СИНХРОНІЗАЦІЯ")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(10.dp))
+                .background(SpotifyCard)
                 .padding(16.dp)
         ) {
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = null,
-                        tint = AccentBlue,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Інтервал перевірки",
-                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 15.sp)
-                        )
-                        Text(
-                            text = "Кожні $syncInterval год",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Segmented Pills
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(1, 2, 6, 24).forEach { hours ->
-                        val selected = syncInterval == hours
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) AccentRed else Color.White.copy(alpha = 0.06f))
-                                .border(0.8.dp, if (selected) AccentRed else GlassBorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable { viewModel.setSyncIntervalHours(hours) }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (hours == 24) "1 раз/д" else "$hours год",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selected) Color.White else TextSecondary
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Wi-Fi Only Switch
-                SettingsSwitchRow(
+                SpotifySwitchOption(
                     icon = Icons.Default.Wifi,
-                    title = "Тільки по Wi-Fi",
-                    subtitle = "Не витрачати мобільний інтернет у фоні",
+                    title = "Тільки через Wi-Fi",
+                    subtitle = "Не використовувати мобільні дані для завантаження",
                     checked = isWifiOnly,
                     onCheckedChange = { viewModel.setWifiOnly(it) }
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Charging Only Switch
-                SettingsSwitchRow(
+                SpotifySwitchOption(
                     icon = Icons.Default.BatteryChargingFull,
-                    title = "Тільки на зарядці",
-                    subtitle = "Заощадження заряду батареї",
+                    title = "Тільки під час зарядки",
+                    subtitle = "Заощаджувати заряд акумулятора",
                     checked = isChargingOnly,
                     onCheckedChange = { viewModel.setChargingOnly(it) }
                 )
@@ -418,163 +354,38 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Section: App Updates (GitHub Releases)
-        SettingsSectionHeader("ОНОВЛЕННЯ ДОДАТКУ")
+        // Section: App Updates
+        SpotifySectionHeader("ОНОВЛЕННЯ ПРОГРАМИ")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(GlassCard)
-                .border(1.dp, GlassBorderSubtle, RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(10.dp))
+                .background(SpotifyCard)
                 .padding(16.dp)
         ) {
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Sync,
-                        contentDescription = null,
-                        tint = AccentRed,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Поточна версія: v${com.ytmusic.downloader.BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                fontSize = 15.sp
-                            )
+                            text = "Поточна версія: v1.1.0",
+                            style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         )
                         Text(
-                            text = "Безшовне оновлення поверх встановленої версії",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextTertiary,
-                                fontSize = 12.sp
-                            )
+                            text = "Перевірка нових випусків через GitHub Releases",
+                            style = MaterialTheme.typography.bodySmall.copy(color = SpotifyTextSecondary, fontSize = 11.sp)
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                when (val state = updateState) {
-                    is com.ytmusic.downloader.update.UpdateState.Idle -> {
-                        Button(
-                            onClick = { viewModel.checkForUpdates() },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Перевірити оновлення", color = TextPrimary)
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.Checking -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = AccentRed,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Пошук нової версії на GitHub…", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.Available -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .border(0.8.dp, AccentGreen.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                                .padding(12.dp)
-                        ) {
-                            Text(
-                                text = "Доступна нова версія: v${state.info.versionName}",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = AccentGreen
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = state.info.releaseNotes,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = { viewModel.downloadAndInstallUpdate(state.info) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Завантажити та встановити", color = Color.White)
-                            }
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.Downloading -> {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("Завантаження оновлення…", color = TextPrimary, fontSize = 13.sp)
-                                Text("${state.progressPercent}%", color = AccentRed, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            LinearProgressIndicator(
-                                progress = { state.progressPercent / 100f },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = AccentRed,
-                                trackColor = Color.White.copy(alpha = 0.08f)
-                            )
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.ReadyToInstall -> {
-                        Button(
-                            onClick = { viewModel.appUpdateManager.triggerInstall(state.apkFile) },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentGreen),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Встановити оновлення", color = Color.White)
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.UpToDate -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.Check, null, tint = AccentGreen, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Встановлено найновішу версію", color = AccentGreen, fontSize = 13.sp)
-                        }
-                    }
-                    is com.ytmusic.downloader.update.UpdateState.Error -> {
-                        Column {
-                            Text(state.message, color = AccentRed, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Button(
-                                onClick = { viewModel.checkForUpdates() },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.08f))
-                            ) {
-                                Text("Спробувати знову", color = TextPrimary)
-                            }
-                        }
+                    Button(
+                        onClick = { viewModel.checkForUpdates() },
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Перевірити", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -583,21 +394,21 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
+fun SpotifySectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelSmall.copy(
+            color = SpotifyTextSecondary,
             fontWeight = FontWeight.Bold,
-            color = TextTertiary,
-            fontSize = 12.sp,
-            letterSpacing = 0.8.sp
+            fontSize = 11.sp,
+            letterSpacing = 1.2.sp
         ),
-        modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
     )
 }
 
 @Composable
-private fun FormatOptionItem(
+fun SpotifyFormatOption(
     title: String,
     subtitle: String,
     isSelected: Boolean,
@@ -606,41 +417,32 @@ private fun FormatOptionItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isSelected) SpotifySurface else Color.Transparent)
             .clickable { onClick() }
-            .padding(12.dp),
+            .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Default.Audiotrack,
-            contentDescription = null,
-            tint = if (isSelected) AccentRed else TextTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) SpotifyGreen else Color.White,
                     fontSize = 14.sp
                 )
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = TextSecondary,
-                    fontSize = 11.sp
-                )
+                style = MaterialTheme.typography.bodySmall.copy(color = SpotifyTextSecondary, fontSize = 11.sp)
             )
         }
+
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                tint = AccentRed,
+                tint = SpotifyGreen,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -648,7 +450,7 @@ private fun FormatOptionItem(
 }
 
 @Composable
-private fun SettingsSwitchRow(
+fun SpotifySwitchOption(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -662,21 +464,18 @@ private fun SettingsSwitchRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = TextSecondary,
+            tint = Color.White,
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontSize = 14.sp)
+                style = MaterialTheme.typography.titleMedium.copy(color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = TextSecondary,
-                    fontSize = 12.sp
-                )
+                style = MaterialTheme.typography.bodySmall.copy(color = SpotifyTextSecondary, fontSize = 11.sp)
             )
         }
         Switch(
@@ -684,9 +483,9 @@ private fun SettingsSwitchRow(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = AccentRed,
-                uncheckedThumbColor = TextTertiary,
-                uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
+                checkedTrackColor = SpotifyGreen,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
             )
         )
     }

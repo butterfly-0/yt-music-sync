@@ -127,6 +127,8 @@ fun MainAppNavHost(
                                 isPlaying = isPlaying,
                                 progress = progress,
                                 onPlayPause = { playerViewModel.playOrPause() },
+                                onNext = { playerViewModel.next() },
+                                onPrevious = { playerViewModel.previous() },
                                 onClick = { playerViewModel.expandNowPlaying() }
                             )
                         }

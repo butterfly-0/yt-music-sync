@@ -1,17 +1,23 @@
 package com.ytmusic.downloader.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
@@ -58,13 +65,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -74,10 +81,10 @@ import com.ytmusic.downloader.player.PlayerRepeatMode
 import com.ytmusic.downloader.ui.theme.SpotifyDark
 import com.ytmusic.downloader.ui.theme.SpotifyGreen
 import com.ytmusic.downloader.ui.theme.SpotifyLyricsCardBg
-import com.ytmusic.downloader.ui.theme.SpotifyTextMuted
 import com.ytmusic.downloader.ui.theme.SpotifyTextSecondary
+import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SpotifyNowPlayingSheet(
     isVisible: Boolean,
@@ -111,8 +118,25 @@ fun SpotifyNowPlayingSheet(
         var isUserSeeking by remember { mutableStateOf(false) }
         var seekSliderProgress by remember { mutableFloatStateOf(0f) }
 
+        var isLiked by remember { mutableStateOf(true) }
+        var isHeartPressed by remember { mutableStateOf(false) }
+        val heartScale by animateFloatAsState(
+            targetValue = if (isHeartPressed) 1.35f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+            label = "heart_scale_full"
+        )
+
+        // Spotify Signature Album Art Scale (expands when playing, scales down when paused)
+        val artScale by animateFloatAsState(
+            targetValue = if (isPlaying) 1.0f else 0.88f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
+            label = "art_scale"
+        )
+
         val scrollState = rememberScrollState()
         val lyricsListState = rememberLazyListState()
+
+        var dragDownDistance by remember { mutableFloatStateOf(0f) }
 
         LaunchedEffect(currentLyricIndex) {
             if (currentLyricIndex >= 0 && lyrics.isNotEmpty() && !lyricsListState.isScrollInProgress) {
@@ -126,19 +150,34 @@ fun SpotifyNowPlayingSheet(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF2C1938),
-                            Color(0xFF191414),
-                            SpotifyDark
+                            Color(0xFF381530),
+                            Color(0xFF1E101D),
+                            SpotifyDark,
+                            Color.Black
                         )
                     )
                 )
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
+                            if (dragDownDistance > 80f) {
+                                onCollapse()
+                            }
+                            dragDownDistance = 0f
+                        },
+                        onDragCancel = { dragDownDistance = 0f },
+                        onVerticalDrag = { _, dragAmount ->
+                            dragDownDistance += dragAmount
+                        }
+                    )
+                }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 24.dp)
-                    .padding(top = 42.dp, bottom = 48.dp)
+                    .padding(top = 44.dp, bottom = 48.dp)
             ) {
                 // Top Header Row
                 Row(
@@ -154,7 +193,7 @@ fun SpotifyNowPlayingSheet(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Згорнути",
                             tint = Color.White,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(34.dp)
                         )
                     }
 
@@ -164,19 +203,19 @@ fun SpotifyNowPlayingSheet(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = SpotifyTextSecondary,
-                                letterSpacing = 1.5.sp,
+                                letterSpacing = 1.6.sp,
                                 fontSize = 10.sp
                             )
                         )
                         Text(
-                            text = currentTrack.album.ifBlank { "Завантажені треки" },
+                            text = currentTrack.album.ifBlank { "Завантажені пісні" },
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 fontSize = 12.sp
                             ),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                         )
                     }
 
@@ -195,13 +234,18 @@ fun SpotifyNowPlayingSheet(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Big Album Art
+                // Big Album Art with Spotify Scale Pulse
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .shadow(elevation = 24.dp, shape = RoundedCornerShape(12.dp), spotColor = Color.Black)
-                        .clip(RoundedCornerShape(12.dp))
+                        .scale(artScale)
+                        .shadow(
+                            elevation = if (isPlaying) 28.dp else 12.dp,
+                            shape = RoundedCornerShape(14.dp),
+                            spotColor = Color.Black
+                        )
+                        .clip(RoundedCornerShape(14.dp))
                         .background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -224,7 +268,7 @@ fun SpotifyNowPlayingSheet(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Title & Artist Row with Heart Icon
+                // Title & Artist Row with Animated Bouncy Heart
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -235,12 +279,12 @@ fun SpotifyNowPlayingSheet(
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
-                                fontSize = 20.sp
+                                fontSize = 21.sp
                             ),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                         )
-                        Spacer(modifier = Modifier.height(3.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = currentTrack.artist,
                             style = MaterialTheme.typography.bodyLarge.copy(
@@ -248,24 +292,35 @@ fun SpotifyNowPlayingSheet(
                                 fontSize = 15.sp
                             ),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                         )
                     }
 
                     IconButton(
-                        onClick = { /* Toggle like */ },
-                        modifier = Modifier.size(44.dp)
+                        onClick = {
+                            isLiked = !isLiked
+                            isHeartPressed = true
+                        },
+                        modifier = Modifier
+                            .size(46.dp)
+                            .scale(heartScale)
                     ) {
+                        LaunchedEffect(isHeartPressed) {
+                            if (isHeartPressed) {
+                                delay(180)
+                                isHeartPressed = false
+                            }
+                        }
                         Icon(
-                            imageVector = Icons.Default.Favorite,
+                            imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Улюблене",
-                            tint = SpotifyGreen,
+                            tint = if (isLiked) SpotifyGreen else SpotifyTextSecondary,
                             modifier = Modifier.size(26.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Seek Bar / Timeline
                 val currentSliderValue = if (isUserSeeking) seekSliderProgress else progress
@@ -321,7 +376,7 @@ fun SpotifyNowPlayingSheet(
                     // Shuffle
                     IconButton(
                         onClick = onToggleShuffle,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(42.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shuffle,
@@ -334,7 +389,7 @@ fun SpotifyNowPlayingSheet(
                     // Previous
                     IconButton(
                         onClick = onPrevious,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(50.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipPrevious,
@@ -344,27 +399,33 @@ fun SpotifyNowPlayingSheet(
                         )
                     }
 
-                    // Big Play / Pause Button (Spotify White Circle)
+                    // Big Play / Pause Button with AnimatedContent
                     Box(
                         modifier = Modifier
-                            .size(66.dp)
+                            .size(68.dp)
                             .clip(CircleShape)
                             .background(Color.White)
                             .clickable { onPlayPause() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Пауза" else "Грати",
-                            tint = Color.Black,
-                            modifier = Modifier.size(36.dp)
-                        )
+                        AnimatedContent(
+                            targetState = isPlaying,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            label = "big_play_pause_transition"
+                        ) { playing ->
+                            Icon(
+                                imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (playing) "Пауза" else "Грати",
+                                tint = Color.Black,
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
                     }
 
                     // Next
                     IconButton(
                         onClick = onNext,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(50.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.SkipNext,
@@ -377,7 +438,7 @@ fun SpotifyNowPlayingSheet(
                     // Repeat
                     IconButton(
                         onClick = onToggleRepeat,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(42.dp)
                     ) {
                         val repeatIcon = if (repeatMode == PlayerRepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
                         Icon(
@@ -441,7 +502,7 @@ fun SpotifyNowPlayingSheet(
                                 itemsIndexed(lyrics) { index, line ->
                                     val isActive = index == currentLyricIndex
                                     val alpha by animateFloatAsState(
-                                        targetValue = if (isActive) 1f else 0.45f,
+                                        targetValue = if (isActive) 1f else 0.4f,
                                         label = "lyric_alpha"
                                     )
 
@@ -450,8 +511,8 @@ fun SpotifyNowPlayingSheet(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                                             color = Color.White.copy(alpha = alpha),
-                                            fontSize = if (isActive) 20.sp else 16.sp,
-                                            lineHeight = 24.sp
+                                            fontSize = if (isActive) 21.sp else 16.sp,
+                                            lineHeight = 26.sp
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
